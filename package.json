@@ -1,0 +1,34 @@
+{
+  "name": "kashflow",
+  "version": "1.0.0",
+  "description": "Aplicación personal para registrar movimientos financieros via Telegram Bot con API REST y dashboard web",
+  "private": true,
+  "author": "Kevin",
+  "license": "MIT",
+  "main": "api/index.js",
+  "packageManager": "pnpm@10.27.0",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "dev": "cross-env NODE_ENV=development node --watch api/index.js",
+    "start": "cross-env NODE_ENV=production node api/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "telegram-bot",
+    "finance",
+    "expense-tracker",
+    "api"
+  ],
+  "dependencies": {
+    "better-sqlite3": "11.7.0",
+    "dotenv": "17.2.1",
+    "express": "5.1.0",
+    "node-telegram-bot-api": "0.66.0",
+    "xlsx": "0.18.5"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0"
+  }
+}

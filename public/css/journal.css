@@ -1,0 +1,279 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap");
+
+:root {
+  /* Paleta de colores relacionado a la imagen */
+  --azul-oscuro: #0d1b4c;
+  --azul-medio: #0e4d92;
+  --turquesa-oscuro: #118ab2;
+  --turquesa-claro: #06d6a0;
+  --verde-agua: #5ce1e6;
+
+  /* Colores base */
+  --bg-primary: #0f0f23;
+  --bg-secondary: #1a1a2e;
+  --bg-card: #16213e;
+  --bg-table-header: #1e293b;
+  --bg-table-row: #334155;
+  --bg-table-hover: #475569;
+
+  /* Texto */
+  --text-primary: #ffffff;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+
+  /* Bordes y sombras */
+  --border-color: #334155;
+  --shadow-dark: rgba(0, 0, 0, 0.4);
+  --shadow-hover: rgba(0, 0, 0, 0.6);
+
+  /* Estados */
+  --color-positive: #22c55e;
+  --color-negative: #ef4444;
+
+  /* Gradientes de bancos */
+  --uala-gradient: linear-gradient(135deg, #1e40af, #2563eb, #3b82f6);
+  --mercadopago-gradient: linear-gradient(135deg, #0891b2, #06b6d4, #22d3ee);
+  --bbva-gradient: linear-gradient(135deg, #1f2937, #374151, #4b5563);
+  --lemon-gradient: linear-gradient(135deg, #15803d, #16a34a, #22c55e);
+  --naranjax-gradient: linear-gradient(135deg, #ea580c, #f59e0b, #fbbf24);
+  --efectivo-gradient: linear-gradient(135deg, #dc2626, #ef4444, #f87171);
+
+  /* Sombras de glow */
+  --uala-glow: rgba(59, 130, 246, 0.3);
+  --mercadopago-glow: rgba(34, 211, 238, 0.3);
+  --bbva-glow: rgba(75, 85, 99, 0.3);
+  --lemon-glow: rgba(34, 197, 94, 0.3);
+  --naranjax-glow: rgba(251, 191, 36, 0.3);
+  --efectivo-glow: rgba(248, 113, 113, 0.3);
+}
+
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+#particles-js {
+  z-index: -1;
+}
+
+/* Estilos del libro diario */
+.container-lg {
+  position: relative;
+  z-index: 1;
+}
+
+.table-dark {
+  background-color: var(--bg-card);
+}
+
+.table-dark th {
+  border-color: var(--border-color);
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.table-dark td {
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+
+.table-hover tbody tr:hover {
+  background-color: var(--bg-table-hover);
+  color: var(--text-primary);
+}
+
+/* Badges para cuentas */
+.badge.bg-primary { background: var(--uala-gradient) !important; }
+.badge.bg-info { background: var(--mercadopago-gradient) !important; }
+.badge.bg-secondary { background: var(--bbva-gradient) !important; }
+.badge.bg-success { background: var(--lemon-gradient) !important; }
+.badge.bg-warning { background: var(--naranjax-gradient) !important; }
+.badge.bg-danger { background: var(--efectivo-gradient) !important; }
+
+/* Modal personalizado */
+.modal-content {
+  border: 1px solid var(--border-color);
+  box-shadow: 0 10px 30px var(--shadow-dark);
+}
+
+.modal-header {
+  background-color: var(--bg-card);
+}
+
+.modal-body {
+  background-color: var(--bg-secondary);
+}
+
+.modal-footer {
+  background-color: var(--bg-card);
+}
+
+.form-control, .form-select {
+  background-color: var(--bg-table-header);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.form-control:focus, .form-select:focus {
+  background-color: var(--bg-table-hover);
+  border-color: var(--turquesa-claro);
+  box-shadow: 0 0 0 0.2rem rgba(92, 225, 230, 0.25);
+  color: var(--text-primary);
+}
+
+.form-control::placeholder {
+  color: var(--text-muted);
+}
+
+/* Botones */
+.btn {
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-success {
+  background-color: var(--color-positive);
+  border-color: var(--color-positive);
+}
+
+.btn-success:hover {
+  background-color: #16a34a;
+  border-color: #16a34a;
+  transform: translateY(-1px);
+}
+
+.btn-outline-warning {
+  color: #fbbf24;
+  border-color: #fbbf24;
+}
+
+.btn-outline-warning:hover {
+  background-color: #fbbf24;
+  border-color: #fbbf24;
+  color: var(--bg-primary);
+}
+
+.btn-outline-danger {
+  color: var(--color-negative);
+  border-color: var(--color-negative);
+}
+
+.btn-outline-danger:hover {
+  background-color: var(--color-negative);
+  border-color: var(--color-negative);
+}
+
+/* Cards */
+.card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px var(--shadow-dark);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px var(--shadow-hover);
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card, .table {
+  animation: fadeInUp 0.4s ease;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container-lg {
+    padding: 0 10px;
+  }
+  
+  .table-responsive {
+    font-size: 0.875rem;
+  }
+  
+  .btn {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+  }
+  
+  h1 {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .table th:nth-child(4),
+  .table td:nth-child(4),
+  .table th:nth-child(5),
+  .table td:nth-child(5) {
+    display: none;
+  }
+  
+  .table th:nth-child(6)::before,
+  .table td:nth-child(6)::before {
+    content: "Balance: ";
+    font-weight: bold;
+  }
+}
+
+/* Estilos legacy para compatibilidad */
+.uala .card-header {
+  background: var(--uala-gradient);
+  box-shadow: 0 0 20px var(--uala-glow);
+}
+.mercadopago .card-header {
+  background: var(--mercadopago-gradient);
+  box-shadow: 0 0 20px var(--mercadopago-glow);
+}
+.bbva .card-header {
+  background: var(--bbva-gradient);
+  box-shadow: 0 0 20px var(--bbva-glow);
+}
+.lemon .card-header {
+  background: var(--lemon-gradient);
+  box-shadow: 0 0 20px var(--lemon-glow);
+}
+.naranjax .card-header {
+  background: var(--naranjax-gradient);
+  box-shadow: 0 0 20px var(--naranjax-glow);
+}
+.efectivo .card-header {
+  background: var(--efectivo-gradient);
+  box-shadow: 0 0 20px var(--efectivo-glow);
+}
+
+.amount {
+  font-weight: 700;
+}
+
+.amount.positive {
+  color: var(--color-positive);
+}
+.amount.negative {
+  color: var(--color-negative);
+}

@@ -1,0 +1,23 @@
+# Entornos
+.env*
+!.env.example
+
+# Dependencias
+node_modules/
+**/node_modules/
+
+# Lockfiles de gestores de paquetes
+pnpm-lock.yaml
+**/pnpm-lock.yaml
+pnpm-workspace.yaml
+package-lock.json
+**/package-lock.json
+
+# Otros
+dist/
+build/
+todo.md
+
+# Base de datos
+data/*.db
+*.db

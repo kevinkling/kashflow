@@ -1,7 +1,18 @@
-const Database = require('better-sqlite3');
-const path = require('path');
+const { Pool } = require('pg');
 
-const dbPath = process.env.DB_PATH || path.join(__dirname, '../../data/kashflow.db');
-const db = new Database(dbPath);
+// Railway automáticamente provee DATABASE_URL en producción
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
 
-module.exports = db;
+// Test de conexión
+pool.on('connect', () => {
+  console.log('✅ Conectado a PostgreSQL');
+});
+
+pool.on('error', (err) => {
+  console.error('❌ Error en PostgreSQL:', err);
+});
+
+module.exports = pool;

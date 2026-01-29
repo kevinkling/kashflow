@@ -1,11 +1,12 @@
-// Configuración de cuentas
+// Configuración de cuentas con colores hexadecimales corporativos
 const accounts = {
-    'UALA': { name: 'Ualá', class: 'uala', color: 'bg-primary' },
-    'MERCADOPAGO': { name: 'MercadoPago', class: 'mercadopago', color: 'bg-info' },
-    'BBVA': { name: 'BBVA', class: 'bbva', color: 'bg-secondary' },
-    'LEMON': { name: 'Lemon', class: 'lemon', color: 'bg-success' },
-    'NARANJAX': { name: 'NaranjaX', class: 'naranjax', color: 'bg-warning' },
-    'EFECTIVO': { name: 'Efectivo', class: 'efectivo', color: 'bg-danger' }
+    'BBVA': { name: 'BBVA', class: 'bbva', color: '#072146', textColor: '#ffffff' },
+    'UALA': { name: 'Ualá', class: 'uala', color: '#00D4FF', textColor: '#000000' },
+    'MP': { name: 'Mercado Pago', class: 'mercadopago', color: '#00A0FF', textColor: '#ffffff' },
+    'EFE': { name: 'Efectivo', class: 'efectivo', color: '#28A745', textColor: '#ffffff' },
+    'AH': { name: 'Ahorros', class: 'ahorros', color: '#6F42C1', textColor: '#ffffff' },
+    'AST': { name: 'Astro', class: 'astro', color: '#E83E8C', textColor: '#ffffff' },
+    'NX': { name: 'Naranja X', class: 'naranjax', color: '#FF6600', textColor: '#ffffff' }
 };
 
 // Variables globales
@@ -20,15 +21,22 @@ async function loadTransactions() {
         const data = await response.json();
         
         // Convertir datos al formato del libro diario
-        transactions = data.map((item, index) => ({
-            id: index + 1,
-            date: parseDate(item.fecha),
-            description: item.descripcion,
-            account: item.banco,
-            amount: item.monto,
-            debit: item.monto > 0 ? item.monto : 0,
-            credit: item.monto < 0 ? Math.abs(item.monto) : 0
-        }));
+        transactions = data.map((item, index) => {
+            const monto = parseFloat(item.monto) || 0;
+            const esDeuda = item.debeHaber === 'debe';
+            
+            return {
+                id: item.id || index + 1,
+                date: parseDate(item.fecha),
+                description: item.descripcion,
+                account: item.banco,
+                banco_destino: item.banco_destino,
+                amount: monto,
+                type: item.debeHaber, // 'debe' o 'haber'
+                debit: esDeuda ? monto : 0,
+                credit: !esDeuda ? monto : 0
+            };
+        });
 
         // Ordenar por fecha (más recientes primero)
         transactions.sort((a, b) => b.date - a.date);
@@ -88,27 +96,43 @@ function renderTransactions() {
     filteredTransactions.forEach(transaction => {
         const row = document.importNode(template, true);
         
-        // Calcular saldo
-        balance += transaction.amount;
+        // Calcular saldo (debe suma, haber resta)
+        balance += (transaction.type === 'debe' ? transaction.amount : -transaction.amount);
         
         // Llenar datos
         row.querySelector('.date').textContent = formatDate(transaction.date);
-        row.querySelector('.description').textContent = transaction.description;
+        
+        // Descripción con indicador de transferencia
+        const description = transaction.banco_destino ? 
+            `${transaction.description} → ${accounts[transaction.banco_destino]?.name || transaction.banco_destino}` : 
+            transaction.description;
+        row.querySelector('.description').textContent = description;
         
         const accountBadge = row.querySelector('.account-badge');
         const accountInfo = accounts[transaction.account];
-        accountBadge.textContent = accountInfo.name;
-        accountBadge.className = `badge ${accountInfo.color}`;
+        
+        if (accountInfo) {
+            accountBadge.textContent = accountInfo.name;
+            accountBadge.style.backgroundColor = accountInfo.color;
+            accountBadge.style.color = accountInfo.textColor;
+        } else {
+            accountBadge.textContent = transaction.account || 'Sin Banco';
+            accountBadge.style.backgroundColor = '#6c757d';
+            accountBadge.style.color = '#ffffff';
+        }
+        accountBadge.className = 'badge';
         
         const debitCell = row.querySelector('.debit');
         const creditCell = row.querySelector('.credit');
         
         if (transaction.debit > 0) {
             debitCell.textContent = formatCurrency(transaction.debit);
+            debitCell.classList.add('text-success', 'fw-bold');
             creditCell.textContent = '';
         } else {
             debitCell.textContent = '';
             creditCell.textContent = formatCurrency(transaction.credit);
+            creditCell.classList.add('text-danger', 'fw-bold');
         }
         
         const balanceCell = row.querySelector('.balance');

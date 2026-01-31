@@ -20,10 +20,12 @@ async function loadTransactions() {
         const response = await fetch('/api/movimientos');
         const data = await response.json();
         
+        console.log('Datos recibidos del servidor:', data); // Debug
+        
         // Convertir datos al formato del libro diario
         transactions = data.map((item, index) => {
             const monto = parseFloat(item.monto) || 0;
-            const esDeuda = item.debeHaber === 'debe';
+            const esDebito = item.debeHaber === 'debe';
             
             return {
                 id: item.id || index + 1,
@@ -31,12 +33,14 @@ async function loadTransactions() {
                 description: item.descripcion,
                 account: item.banco,
                 banco_destino: item.banco_destino,
-                amount: monto,
+                amount: monto, // Ya viene con el signo correcto del backend
                 type: item.debeHaber, // 'debe' o 'haber'
-                debit: esDeuda ? monto : 0,
-                credit: !esDeuda ? monto : 0
+                debit: esDebito ? Math.abs(monto) : 0,
+                credit: !esDebito ? Math.abs(monto) : 0
             };
         });
+
+        console.log('Transacciones procesadas:', transactions); // Debug
 
         // Ordenar por fecha (más recientes primero)
         transactions.sort((a, b) => b.date - a.date);
@@ -96,8 +100,8 @@ function renderTransactions() {
     filteredTransactions.forEach(transaction => {
         const row = document.importNode(template, true);
         
-        // Calcular saldo (debe suma, haber resta)
-        balance += (transaction.type === 'debe' ? transaction.amount : -transaction.amount);
+        // Calcular saldo acumulado (el monto ya viene con el signo correcto)
+        balance += transaction.amount;
         
         // Llenar datos
         row.querySelector('.date').textContent = formatDate(transaction.date);
@@ -174,12 +178,13 @@ function updateBalance() {
 function initializeDateFilters() {
     const now = new Date();
     
-    // Último día del mes anterior
-    // const lastDayOfPreviousMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-    const lastDayOfPreviousMonth = new Date(now.getFullYear() - 1, 0, 1);
+    // Último día del mes anterior (día de cobro)
+    const lastDayOfPreviousMonth = new Date(now.getFullYear(), now.getMonth(), 0);
     
-    // Anteúltimo día del mes actual (último día del mes menos 1 día)
+    // Último día del mes actual
     const lastDayOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    
+    // Anteúltimo día del mes actual (último día menos 1)
     const secondToLastDayOfCurrentMonth = new Date(lastDayOfCurrentMonth);
     secondToLastDayOfCurrentMonth.setDate(lastDayOfCurrentMonth.getDate() - 1);
     
@@ -392,24 +397,38 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Modal y formularios
-    document.querySelector('[data-bs-target="#addTransactionModal"]').addEventListener('click', showAddTransactionModal);
+    const addTransactionBtn = document.querySelector('[data-bs-target="#addTransactionModal"]');
+    if (addTransactionBtn) {
+        addTransactionBtn.addEventListener('click', showAddTransactionModal);
+    }
     
-    document.getElementById('saveTransactionBtn').addEventListener('click', saveTransaction);
+    const saveTransactionBtn = document.getElementById('saveTransactionBtn');
+    if (saveTransactionBtn) {
+        saveTransactionBtn.addEventListener('click', saveTransaction);
+    }
     
     // Limpiar validación del formulario al cerrar modal
-    document.getElementById('addTransactionModal').addEventListener('hidden.bs.modal', () => {
-        document.getElementById('transactionForm').classList.remove('was-validated');
-    });
+    const addTransactionModal = document.getElementById('addTransactionModal');
+    if (addTransactionModal) {
+        addTransactionModal.addEventListener('hidden.bs.modal', () => {
+            const transactionForm = document.getElementById('transactionForm');
+            if (transactionForm) {
+                transactionForm.classList.remove('was-validated');
+            }
+        });
+    }
     
     // Validar que solo se llene un campo (debe o haber)
     const debitInput = document.getElementById('transactionDebit');
     const creditInput = document.getElementById('transactionCredit');
     
-    debitInput.addEventListener('input', () => {
-        if (debitInput.value) creditInput.value = '';
-    });
-    
-    creditInput.addEventListener('input', () => {
-        if (creditInput.value) debitInput.value = '';
-    });
+    if (debitInput && creditInput) {
+        debitInput.addEventListener('input', () => {
+            if (debitInput.value) creditInput.value = '';
+        });
+        
+        creditInput.addEventListener('input', () => {
+            if (creditInput.value) debitInput.value = '';
+        });
+    }
 });

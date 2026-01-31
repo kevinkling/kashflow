@@ -6,12 +6,11 @@
 node_modules/
 **/node_modules/
 
-# Lockfiles de gestores de paquetes
-pnpm-lock.yaml
-**/pnpm-lock.yaml
-pnpm-workspace.yaml
+# Lockfiles de otros gestores de paquetes (NO pnpm)
 package-lock.json
 **/package-lock.json
+yarn.lock
+**/yarn.lock
 
 # Otros
 dist/
@@ -21,3 +20,5 @@ todo.md
 # Base de datos
 data/*.db
 *.db
+*.db-shm
+*.db-wal

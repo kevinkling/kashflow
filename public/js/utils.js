@@ -16,6 +16,11 @@ function formatDate(dateString) {
 }
 
 function parseDate(dateString) {
+    // Validar que dateString existe y no es null/undefined
+    if (!dateString) {
+        return new Date('1900-01-01'); // Fecha muy antigua para identificar datos inválidos
+    }
+    
     // Convertir formato DD/MM/YYYY HH:mm:ss a Date
     if (dateString.includes('/')) {
         const [datePart, timePart] = dateString.split(' ');

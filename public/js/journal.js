@@ -1,14 +1,3 @@
-// Configuración de cuentas con colores hexadecimales corporativos
-const accounts = {
-    'BBVA': { name: 'BBVA', class: 'bbva', color: '#072146', textColor: '#ffffff' },
-    'UALA': { name: 'Ualá', class: 'uala', color: '#00D4FF', textColor: '#000000' },
-    'MP': { name: 'Mercado Pago', class: 'mercadopago', color: '#00A0FF', textColor: '#ffffff' },
-    'EFE': { name: 'Efectivo', class: 'efectivo', color: '#28A745', textColor: '#ffffff' },
-    'AH': { name: 'Ahorros', class: 'ahorros', color: '#6F42C1', textColor: '#ffffff' },
-    'AST': { name: 'Astro', class: 'astro', color: '#E83E8C', textColor: '#ffffff' },
-    'NX': { name: 'Naranja X', class: 'naranjax', color: '#FF6600', textColor: '#ffffff' }
-};
-
 // Variables globales
 let transactions = [];
 let filteredTransactions = [];
@@ -32,6 +21,8 @@ async function loadTransactions() {
                 date: parseDate(item.fecha),
                 description: item.descripcion,
                 account: item.banco,
+                account_name: item.banco_nombre || item.banco,
+                account_color: item.banco_color || '#6c757d',
                 banco_destino: item.banco_destino,
                 amount: monto, // Ya viene con el signo correcto del backend
                 type: item.debeHaber, // 'debe' o 'haber'
@@ -108,22 +99,18 @@ function renderTransactions() {
         
         // Descripción con indicador de transferencia
         const description = transaction.banco_destino ? 
-            `${transaction.description} → ${accounts[transaction.banco_destino]?.name || transaction.banco_destino}` : 
+            `${transaction.description} → ${transaction.banco_destino}` : 
             transaction.description;
         row.querySelector('.description').textContent = description;
         
         const accountBadge = row.querySelector('.account-badge');
-        const accountInfo = accounts[transaction.account];
         
-        if (accountInfo) {
-            accountBadge.textContent = accountInfo.name;
-            accountBadge.style.backgroundColor = accountInfo.color;
-            accountBadge.style.color = accountInfo.textColor;
-        } else {
-            accountBadge.textContent = transaction.account || 'Sin Banco';
-            accountBadge.style.backgroundColor = '#6c757d';
-            accountBadge.style.color = '#ffffff';
-        }
+        // Usar los datos que vienen del backend
+        accountBadge.textContent = transaction.account_name || transaction.account || 'Sin Banco';
+        accountBadge.style.backgroundColor = transaction.account_color || '#6c757d';
+        
+        // Calcular color de texto según el brillo del color de fondo
+        accountBadge.style.color = getContrastTextColor(transaction.account_color || '#6c757d');
         accountBadge.className = 'badge';
         
         const debitCell = row.querySelector('.debit');

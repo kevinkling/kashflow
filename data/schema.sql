@@ -145,6 +145,7 @@ SELECT
     u.nombre AS usuario,
     c.nombre AS cuenta,
     c.alias AS cuenta_alias,
+    c.color AS cuenta_color,
     t.tipo,
     t.monto,
     t.signo,

@@ -22,6 +22,8 @@ router.get('/movimientos', async (req, res) => {
             fecha: m.fecha_hora,
             descripcion: m.descripcion,
             banco: m.cuenta_alias || m.cuenta, // Usar alias primero, luego nombre
+            banco_nombre: m.cuenta, // Nombre completo del banco
+            banco_color: m.cuenta_color || '#6c757d', // Color del banco (con fallback)
             banco_destino: null, // TODO: implementar lógica de transferencias si es necesario
             monto: m.monto_con_signo, // Ya incluye el signo (+/-)
             debeHaber: m.tipo // 'debe' o 'haber'

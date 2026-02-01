@@ -18,7 +18,7 @@ CREATE TABLE usuarios (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     telegram_user_id INTEGER NOT NULL UNIQUE,
     nombre TEXT NOT NULL,
-    fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    fecha_creacion DATETIME NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
 
 -- Índice para búsquedas por telegram_user_id
@@ -36,7 +36,7 @@ CREATE TABLE cuentas (
     color TEXT NOT NULL,  -- Formato hex: #FF5733
     moneda TEXT NOT NULL DEFAULT 'ARS',  -- ARS, USD, EUR, etc.
     activa BOOLEAN NOT NULL DEFAULT 1,  -- 1=activa, 0=inactiva
-    fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_creacion DATETIME NOT NULL DEFAULT (datetime('now', 'localtime')),
     
     -- Clave foránea
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
@@ -53,7 +53,7 @@ CREATE INDEX idx_cuentas_alias ON cuentas(alias);
 -- ============================================================================
 CREATE TABLE transferencias (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    fecha_hora DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_hora DATETIME NOT NULL DEFAULT (datetime('now', 'localtime')),
     cuenta_origen_id INTEGER NOT NULL,
     cuenta_destino_id INTEGER NOT NULL,
     monto DECIMAL(15, 2) NOT NULL CHECK(monto > 0),
@@ -78,7 +78,7 @@ CREATE INDEX idx_transferencias_destino ON transferencias(cuenta_destino_id);
 -- ============================================================================
 CREATE TABLE transacciones (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    fecha_hora DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_hora DATETIME NOT NULL DEFAULT (datetime('now', 'localtime')),
     cuenta_id INTEGER NOT NULL,
     tipo TEXT NOT NULL CHECK(tipo IN ('debe', 'haber')),
     signo INTEGER NOT NULL CHECK(signo IN (1, -1)),

@@ -2,7 +2,7 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
-const dataDir = process.env.DATA_DIR || '/app/data';
+const dataDir = process.env.DATA_DIR;
 const dbPath = path.join(dataDir, 'kashflow.db');
 
 function initializeDataDirectory() {
@@ -21,14 +21,12 @@ function initializeDataDirectory() {
   }
 }
 
-// CONFIGURACIÓN DE SQLITE
+// Configuración de SQLite
 function configureSQLite(db) {
   db.pragma('journal_mode = DELETE');
   db.pragma('synchronous = FULL');
   db.pragma('foreign_keys = ON');
   db.pragma('temp_store = MEMORY');
-  
-  console.log('✅ SQLite configurado en DELETE mode (optimizado para Docker)');
 }
 
 initializeDataDirectory();

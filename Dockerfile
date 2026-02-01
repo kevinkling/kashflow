@@ -43,7 +43,11 @@ LABEL description="KashFlow - Sistema de Finanzas Personales"
 LABEL version="1.0.0"
 
 # Instalar solo SQLite runtime
-RUN apt-get update && apt-get install -y sqlite3 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y sqlite3 tzdata && rm -rf /var/lib/apt/lists/*
+
+# Configurar timezone (Argentina)
+ENV TZ=America/Argentina/Buenos_Aires
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Crear usuario no-root para seguridad
 RUN groupadd -r nodejs && useradd -r -g nodejs nodejs

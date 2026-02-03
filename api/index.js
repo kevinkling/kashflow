@@ -47,7 +47,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
 // Rutas de la API
-app.use('/telegram', telegramRoutes);
+app.use('/kashflow/telegram', telegramRoutes);
 app.use('/api', webRoutes);
 
 // Configurar webhook de Telegram al iniciar

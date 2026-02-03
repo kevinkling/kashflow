@@ -425,7 +425,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Modal y formularios
-    const addTransactionBtn = document.querySelector('[data-bs-target="#addTransactionModal"]');
+    /* const addTransactionBtn = document.querySelector('[data-bs-target="#addTransactionModal"]');
     if (addTransactionBtn) {
         addTransactionBtn.addEventListener('click', showAddTransactionModal);
     }
@@ -458,5 +458,5 @@ document.addEventListener('DOMContentLoaded', function() {
         creditInput.addEventListener('input', () => {
             if (creditInput.value) debitInput.value = '';
         });
-    }
+    } */
 });

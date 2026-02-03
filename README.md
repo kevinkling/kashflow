@@ -7,7 +7,7 @@
 ## 🧠 ¿Qué hace?
 
 Este proyecto permite enviar mensajes con estructuras predefinidas al bot de Telegram y registrar automáticamente los datos en una base de datos SQLite.  
-También incluye un dashboard web para visualizar y gestionar los movimientos financieros.
+También incluye un dashboard web para visualizar y gestionar los movimientos financieros..
 
 ---
 

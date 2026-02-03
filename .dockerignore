@@ -1,0 +1,46 @@
+# Dependencias
+node_modules
+
+# Desarrollo
+*.log
+*.md
+!README.md
+.env*
+!.env.production
+.vscode
+.idea
+
+# Git
+.git
+.gitignore
+
+# Base de datos local
+data/*.db*
+
+# Temporales
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Testing
+test
+tests
+*.test.js
+*.spec.js
+coverage
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Build
+dist
+build
+.cache

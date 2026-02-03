@@ -1,12 +1,31 @@
 // Cargar variables de entorno según el ambiente
 const path = require('path');
+const fs = require('fs');
 const env = process.env.NODE_ENV || 'development';
 
 // Ruta absoluta al directorio raíz del proyecto
 const projectRoot = path.join(__dirname, '..');
 
-// Intentar cargar el archivo específico del entorno (.env.development o .env.production)
-const envResult = require('dotenv').config({ path: path.join(projectRoot, `.env.${env}`) });
+// Intentar cargar el archivo específico del entorno (.env.development, .env.production)
+// Si no existe, cargar .env por defecto
+const envFiles = [
+    path.join(projectRoot, `.env.${env}`),
+    path.join(projectRoot, '.env')
+];
+
+let envLoaded = false;
+for (const envFile of envFiles) {
+    if (fs.existsSync(envFile)) {
+        require('dotenv').config({ path: envFile });
+        console.log(`✅ Variables de entorno cargadas desde: ${path.basename(envFile)}`);
+        envLoaded = true;
+        break;
+    }
+}
+
+if (!envLoaded && process.env.NODE_ENV !== 'production') {
+    console.warn('⚠️  No se encontró archivo .env');
+}
 
 const express = require('express');
 const app = express();
@@ -28,12 +47,12 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
 // Rutas de la API
-app.use('/telegram', telegramRoutes);
+app.use('/kashflow/telegram', telegramRoutes);
 app.use('/api', webRoutes);
 
 // Configurar webhook de Telegram al iniciar
 const webhookUrl = process.env.WEBHOOK_URL;
-
+console.log('WEBHOOK_URL:', webhookUrl);
 if (webhookUrl) {
     const fullWebhookUrl = `${webhookUrl}/telegram/webhook`;
     console.log(fullWebhookUrl)

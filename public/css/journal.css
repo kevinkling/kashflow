@@ -228,16 +228,8 @@ body {
 
 @media (max-width: 576px) {
   .table th:nth-child(4),
-  .table td:nth-child(4),
-  .table th:nth-child(5),
-  .table td:nth-child(5) {
-    display: none;
-  }
-  
-  .table th:nth-child(6)::before,
-  .table td:nth-child(6)::before {
-    content: "Balance: ";
-    font-weight: bold;
+  .table td:nth-child(4) {
+    font-size: 0.8rem;
   }
 }
 
@@ -276,4 +268,24 @@ body {
 }
 .amount.negative {
   color: var(--color-negative);
+}
+
+/* Indicadores */
+#totalBalance, #monthlyIncome, #monthlyExpenses {
+  font-size: 1.5rem;
+  letter-spacing: 0.5px;
+}
+
+#topAccountsContainer .card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#topAccountsContainer .card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+#topAccountsContainer h5 {
+  font-size: 1.2rem;
+  font-weight: 700;
 }

@@ -47,18 +47,23 @@ module.exports = bot => ({
 
   resumen: async msg => {
     const chatId = msg.chat.id;
-    const { consultarSaldosPorBanco } = require("../services/dbHelper");
+    const { consultarSaldosPorCuenta } = require("../services/dbHelper");
 
     // Función para capitalizar la primera letra
     const capitalize = str => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 
-    // Consultar los saldos por banco
-    const saldos = consultarSaldosPorBanco();
+    // Consultar los saldos por cuenta
+    const saldos = await consultarSaldosPorCuenta();
+
+    if (saldos.length === 0) {
+      await bot.sendMessage(chatId, "💳 No hay cuentas registradas.");
+      return;
+    }
 
     // Construir el mensaje con los saldos
-    let mensaje = "💳 *Resumen de saldos por banco:*\n\n"; // Usar Markdown para el título
+    let mensaje = "💳 *Resumen de saldos por cuenta:*\n\n"; // Usar Markdown para el título
     saldos.forEach(saldo => {
-      mensaje += `🏦 ${capitalize(saldo.banco)}: *$${saldo.saldo.toLocaleString("es-AR", { minimumFractionDigits: 2 })}*\n`;
+      mensaje += `🏦 ${capitalize(saldo.cuenta)} (${saldo.alias}): *$${Number(saldo.saldo_actual).toLocaleString("es-AR", { minimumFractionDigits: 2 })}* ${saldo.moneda}\n`;
     });
 
     // Enviar el mensaje al usuario con la opción de parse_mode
@@ -70,7 +75,7 @@ module.exports = bot => ({
     const { consultarRegistrosHoy } = require("../services/dbHelper");
     const { getFormattedDate } = require("../services/utils");
 
-    const registros = consultarRegistrosHoy();
+    const registros = await consultarRegistrosHoy();
 
     if (registros.length === 0) {
       await bot.sendMessage(chatId, "📅 No hay registros cargados hasta la fecha de hoy.");
@@ -80,9 +85,11 @@ module.exports = bot => ({
     // Construir el mensaje con los registros
     let mensaje = "📋 *Registros cargados hasta hoy:*\n\n";
     registros.forEach(registro => {
-      mensaje += `📝 *${registro.descripcion}*\n`;
-      mensaje += `   - Banco: ${registro.banco}\n`;
-      mensaje += `   - Monto: $${registro.monto.toLocaleString("es-AR", { minimumFractionDigits: 2 })}\n`;
+      const tipoEmoji = registro.tipo === 'debe' ? '➕' : '➖';
+      mensaje += `${tipoEmoji} *${registro.descripcion}*\n`;
+      mensaje += `   - Cuenta: ${registro.cuenta} (${registro.cuenta_alias})\n`;
+      mensaje += `   - Monto: $${Number(registro.monto).toLocaleString("es-AR", { minimumFractionDigits: 2 })}\n`;
+      mensaje += `   - Tipo: ${registro.es_transferencia}\n\n`;
     });
 
     // Enviar el mensaje al usuario

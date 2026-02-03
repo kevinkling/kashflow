@@ -1,17 +1,6 @@
-// Configuración de cuentas
-const accounts = {
-    'UALA': { name: 'Ualá', class: 'uala', color: 'bg-primary' },
-    'MERCADOPAGO': { name: 'MercadoPago', class: 'mercadopago', color: 'bg-info' },
-    'BBVA': { name: 'BBVA', class: 'bbva', color: 'bg-secondary' },
-    'LEMON': { name: 'Lemon', class: 'lemon', color: 'bg-success' },
-    'NARANJAX': { name: 'NaranjaX', class: 'naranjax', color: 'bg-warning' },
-    'EFECTIVO': { name: 'Efectivo', class: 'efectivo', color: 'bg-danger' }
-};
-
 // Variables globales
 let transactions = [];
 let filteredTransactions = [];
-let runningBalance = 0;
 
 // Cargar datos del servidor
 async function loadTransactions() {
@@ -19,23 +8,36 @@ async function loadTransactions() {
         const response = await fetch('/api/movimientos');
         const data = await response.json();
         
+        console.log('Datos recibidos del servidor:', data); // Debug
+        
         // Convertir datos al formato del libro diario
-        transactions = data.map((item, index) => ({
-            id: index + 1,
-            date: parseDate(item.fecha),
-            description: item.descripcion,
-            account: item.banco,
-            amount: item.monto,
-            debit: item.monto > 0 ? item.monto : 0,
-            credit: item.monto < 0 ? Math.abs(item.monto) : 0
-        }));
+        transactions = data.map((item, index) => {
+            const monto = parseFloat(item.monto) || 0;
+            const esDebito = item.debeHaber === 'debe';
+            
+            return {
+                id: item.id || index + 1,
+                date: parseDate(item.fecha),
+                description: item.descripcion,
+                account: item.banco,
+                account_name: item.banco_nombre || item.banco,
+                account_color: item.banco_color || '#6c757d',
+                banco_destino: item.banco_destino,
+                amount: monto, // Ya viene con el signo correcto del backend
+                type: item.debeHaber, // 'debe' o 'haber'
+                debit: esDebito ? Math.abs(monto) : 0,
+                credit: !esDebito ? Math.abs(monto) : 0
+            };
+        });
+
+        console.log('Transacciones procesadas:', transactions); // Debug
 
         // Ordenar por fecha (más recientes primero)
         transactions.sort((a, b) => b.date - a.date);
         
         applyFilters();
         renderTransactions();
-        updateBalance();
+        updateIndicators();
         
     } catch (error) {
         console.error('Error al cargar transacciones:', error);
@@ -74,7 +76,7 @@ function renderTransactions() {
     if (filteredTransactions.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" class="text-center text-muted py-4">
+                <td colspan="5" class="text-center text-muted py-4">
                     <i class="bi bi-journal-x fs-1"></i>
                     <br>No hay transacciones para mostrar
                 </td>
@@ -82,38 +84,38 @@ function renderTransactions() {
         `;
         return;
     }
-
-    let balance = calculateInitialBalance();
     
     filteredTransactions.forEach(transaction => {
         const row = document.importNode(template, true);
         
-        // Calcular saldo
-        balance += transaction.amount;
-        
         // Llenar datos
         row.querySelector('.date').textContent = formatDate(transaction.date);
-        row.querySelector('.description').textContent = transaction.description;
+        
+        // Descripción con indicador de transferencia
+        const description = transaction.banco_destino ? 
+            `${transaction.description} → ${transaction.banco_destino}` : 
+            transaction.description;
+        row.querySelector('.description').textContent = description;
         
         const accountBadge = row.querySelector('.account-badge');
-        const accountInfo = accounts[transaction.account];
-        accountBadge.textContent = accountInfo.name;
-        accountBadge.className = `badge ${accountInfo.color}`;
         
-        const debitCell = row.querySelector('.debit');
-        const creditCell = row.querySelector('.credit');
+        // Usar los datos que vienen del backend
+        accountBadge.textContent = transaction.account_name || transaction.account || 'Sin Banco';
+        accountBadge.style.backgroundColor = transaction.account_color || '#6c757d';
         
-        if (transaction.debit > 0) {
-            debitCell.textContent = formatCurrency(transaction.debit);
-            creditCell.textContent = '';
-        } else {
-            debitCell.textContent = '';
-            creditCell.textContent = formatCurrency(transaction.credit);
-        }
+        // Calcular color de texto según el brillo del color de fondo
+        accountBadge.style.color = getContrastTextColor(transaction.account_color || '#6c757d');
+        accountBadge.className = 'badge';
         
-        const balanceCell = row.querySelector('.balance');
-        balanceCell.textContent = formatCurrency(balance);
-        balanceCell.className = `balance fw-bold ${balance >= 0 ? 'text-success' : 'text-danger'}`;
+        // Columna de monto unificada con signo, color e ícono
+        const amountCell = row.querySelector('.amount');
+        const isPositive = transaction.debit > 0;
+        const amountValue = isPositive ? transaction.debit : transaction.credit;
+        const sign = isPositive ? '+' : '−';
+        const icon = isPositive ? '<i class="bi bi-arrow-up-circle me-1"></i>' : '<i class="bi bi-arrow-down-circle me-1"></i>';
+        const colorClass = isPositive ? 'text-success' : 'text-danger';
+        
+        amountCell.innerHTML = `${icon}<span class="${colorClass} fw-bold">${sign} ${formatCurrency(amountValue)}</span>`;
         
         // Eventos de botones
         const editBtn = row.querySelector('.edit-btn');
@@ -126,36 +128,94 @@ function renderTransactions() {
     });
 }
 
-// Calcular saldo inicial (transacciones no filtradas anteriores a las filtradas)
-function calculateInitialBalance() {
-    if (filteredTransactions.length === 0) return 0;
+// Actualizar indicadores principales y secundarios
+function updateIndicators() {
+    // Calcular saldo total (todas las transacciones)
+    const totalBalance = transactions.reduce((sum, t) => sum + t.amount, 0);
     
-    const earliestFiltered = Math.min(...filteredTransactions.map(t => t.date));
+    // Obtener mes actual
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
     
-    return transactions
-        .filter(t => t.date < earliestFiltered)
-        .reduce((sum, t) => sum + t.amount, 0);
-}
-
-// Actualizar saldo actual (basado en transacciones filtradas)
-function updateBalance() {
-    const totalBalance = filteredTransactions.reduce((sum, t) => sum + t.amount, 0);
-    const balanceElement = document.getElementById('currentBalance');
+    // Filtrar transacciones del mes actual
+    const currentMonthTransactions = transactions.filter(t => {
+        return t.date.getMonth() === currentMonth && t.date.getFullYear() === currentYear;
+    });
     
-    balanceElement.textContent = formatCurrency(totalBalance);
-    balanceElement.className = totalBalance >= 0 ? 'text-white mb-0' : 'text-warning mb-0';
+    // Calcular ingresos y gastos del mes
+    const monthlyIncome = currentMonthTransactions
+        .filter(t => t.debit > 0)
+        .reduce((sum, t) => sum + t.debit, 0);
+    
+    const monthlyExpenses = currentMonthTransactions
+        .filter(t => t.credit > 0)
+        .reduce((sum, t) => sum + t.credit, 0);
+    
+    // Actualizar indicadores principales
+    const totalBalanceEl = document.getElementById('totalBalance');
+    totalBalanceEl.textContent = formatCurrency(totalBalance);
+    totalBalanceEl.className = `mb-0 fw-bold ${totalBalance >= 0 ? 'text-white' : 'text-warning'}`;
+    
+    document.getElementById('monthlyIncome').textContent = formatCurrency(monthlyIncome);
+    document.getElementById('monthlyExpenses').textContent = formatCurrency(monthlyExpenses);
+    
+    // Calcular saldo por cuenta
+    const accountBalances = {};
+    transactions.forEach(t => {
+        const account = t.account;
+        if (!accountBalances[account]) {
+            accountBalances[account] = {
+                name: t.account_name || t.account,
+                color: t.account_color || '#6c757d',
+                balance: 0
+            };
+        }
+        accountBalances[account].balance += t.amount;
+    });
+    
+    // Ordenar cuentas por saldo (mayor a menor) y tomar top 3
+    const topAccounts = Object.values(accountBalances)
+        .sort((a, b) => b.balance - a.balance)
+        .slice(0, 3);
+    
+    // Renderizar top 3 cuentas
+    const topAccountsContainer = document.getElementById('topAccountsContainer');
+    topAccountsContainer.innerHTML = '';
+    
+    topAccounts.forEach((account, index) => {
+        const balanceColor = account.balance >= 0 ? '#10b981' : '#ef4444';
+        const col = document.createElement('div');
+        col.className = 'col-md-4';
+        col.innerHTML = `
+            <div class="card bg-secondary bg-opacity-50">
+                <div class="card-body text-center py-2">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span class="badge" style="background-color: ${account.color}; color: ${getContrastTextColor(account.color)}">
+                            ${account.name}
+                        </span>
+                    </div>
+                    <h5 class="mb-0 mt-2 fw-bold" style="color: ${balanceColor}">
+                        ${formatCurrency(account.balance)}
+                    </h5>
+                </div>
+            </div>
+        `;
+        topAccountsContainer.appendChild(col);
+    });
 }
 
 // Inicializar fechas de filtro por defecto
 function initializeDateFilters() {
     const now = new Date();
     
-    // Último día del mes anterior
-    // const lastDayOfPreviousMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-    const lastDayOfPreviousMonth = new Date(now.getFullYear() - 1, 0, 1);
+    // Último día del mes anterior (día de cobro)
+    const lastDayOfPreviousMonth = new Date(now.getFullYear(), now.getMonth(), 0);
     
-    // Anteúltimo día del mes actual (último día del mes menos 1 día)
+    // Último día del mes actual
     const lastDayOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    
+    // Anteúltimo día del mes actual (último día menos 1)
     const secondToLastDayOfCurrentMonth = new Date(lastDayOfCurrentMonth);
     secondToLastDayOfCurrentMonth.setDate(lastDayOfCurrentMonth.getDate() - 1);
     
@@ -352,40 +412,51 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('dateFrom').addEventListener('change', () => {
         applyFilters();
         renderTransactions();
-        updateBalance();
     });
     
     document.getElementById('dateTo').addEventListener('change', () => {
         applyFilters();
         renderTransactions();
-        updateBalance();
     });
     
     document.getElementById('searchInput').addEventListener('input', () => {
         applyFilters();
         renderTransactions();
-        updateBalance();
     });
     
     // Modal y formularios
-    document.querySelector('[data-bs-target="#addTransactionModal"]').addEventListener('click', showAddTransactionModal);
+    /* const addTransactionBtn = document.querySelector('[data-bs-target="#addTransactionModal"]');
+    if (addTransactionBtn) {
+        addTransactionBtn.addEventListener('click', showAddTransactionModal);
+    }
     
-    document.getElementById('saveTransactionBtn').addEventListener('click', saveTransaction);
+    const saveTransactionBtn = document.getElementById('saveTransactionBtn');
+    if (saveTransactionBtn) {
+        saveTransactionBtn.addEventListener('click', saveTransaction);
+    }
     
     // Limpiar validación del formulario al cerrar modal
-    document.getElementById('addTransactionModal').addEventListener('hidden.bs.modal', () => {
-        document.getElementById('transactionForm').classList.remove('was-validated');
-    });
+    const addTransactionModal = document.getElementById('addTransactionModal');
+    if (addTransactionModal) {
+        addTransactionModal.addEventListener('hidden.bs.modal', () => {
+            const transactionForm = document.getElementById('transactionForm');
+            if (transactionForm) {
+                transactionForm.classList.remove('was-validated');
+            }
+        });
+    }
     
     // Validar que solo se llene un campo (debe o haber)
     const debitInput = document.getElementById('transactionDebit');
     const creditInput = document.getElementById('transactionCredit');
     
-    debitInput.addEventListener('input', () => {
-        if (debitInput.value) creditInput.value = '';
-    });
-    
-    creditInput.addEventListener('input', () => {
-        if (creditInput.value) debitInput.value = '';
-    });
+    if (debitInput && creditInput) {
+        debitInput.addEventListener('input', () => {
+            if (debitInput.value) creditInput.value = '';
+        });
+        
+        creditInput.addEventListener('input', () => {
+            if (creditInput.value) debitInput.value = '';
+        });
+    } */
 });

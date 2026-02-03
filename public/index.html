@@ -38,7 +38,7 @@
     <!-- Filtros y Resumen -->
     <div class="container-lg mt-4">
       <div class="row mb-4">
-        <div class="col-md-8">
+        <div class="col-md-12">
           <div class="card bg-dark bg-opacity-75">
             <div class="card-body">
               <div class="row g-3">
@@ -58,11 +58,53 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Indicadores Principales -->
+      <div class="row mb-4">
+        <div class="col-md-4">
+          <div class="card bg-primary bg-opacity-75">
+            <div class="card-body text-center">
+              <h6 class="card-title text-white mb-1">
+                <i class="bi bi-wallet2 me-2"></i>Saldo Total
+              </h6>
+              <h4 id="totalBalance" class="text-white mb-0 fw-bold">$0.00</h4>
+            </div>
+          </div>
+        </div>
         <div class="col-md-4">
           <div class="card bg-success bg-opacity-75">
             <div class="card-body text-center">
-              <h5 class="card-title text-white mb-1">Saldo Actual</h5>
-              <h3 id="currentBalance" class="text-white mb-0">$0.00</h3>
+              <h6 class="card-title text-white mb-1">
+                <i class="bi bi-arrow-up-circle me-2"></i>Ingresos Mes
+              </h6>
+              <h4 id="monthlyIncome" class="text-white mb-0 fw-bold">$0.00</h4>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card bg-danger bg-opacity-75">
+            <div class="card-body text-center">
+              <h6 class="card-title text-white mb-1">
+                <i class="bi bi-arrow-down-circle me-2"></i>Gastos Mes
+              </h6>
+              <h4 id="monthlyExpenses" class="text-white mb-0 fw-bold">$0.00</h4>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Indicadores Secundarios: Top 3 Cuentas -->
+      <div class="row mb-4">
+        <div class="col-md-12">
+          <div class="card bg-dark bg-opacity-75">
+            <div class="card-body">
+              <h6 class="text-white mb-3">
+                <i class="bi bi-bank me-2"></i>Cuentas con Mayor Saldo
+              </h6>
+              <div class="row g-3" id="topAccountsContainer">
+                <!-- Se llenará dinámicamente -->
+              </div>
             </div>
           </div>
         </div>
@@ -81,12 +123,10 @@
             <table class="table table-dark table-striped table-hover mb-0">
               <thead>
                 <tr>
-                  <th style="width: 10%">Fecha</th>
-                  <th style="width: 35%">Descripción</th>
-                  <th style="width: 15%">Cuenta</th>
-                  <th style="width: 12%">Debe</th>
-                  <th style="width: 12%">Haber</th>
-                  <th style="width: 12%">Saldo</th>
+                  <th style="width: 12%">Fecha</th>
+                  <th style="width: 40%">Descripción</th>
+                  <th style="width: 18%">Cuenta</th>
+                  <th style="width: 26%">Monto</th>
                   <th style="width: 4%">Acciones</th>
                 </tr>
               </thead>
@@ -166,9 +206,7 @@
         <td class="account">
           <span class="badge account-badge"></span>
         </td>
-        <td class="debit text-success"></td>
-        <td class="credit text-danger"></td>
-        <td class="balance fw-bold"></td>
+        <td class="amount"></td>
         <td class="actions text-center">
           <button class="btn btn-sm btn-outline-warning mb-1 edit-btn" title="Editar">
             <i class="bi bi-pencil"></i>

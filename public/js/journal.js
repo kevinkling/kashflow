@@ -1,20 +1,21 @@
 // Variables globales
 let transactions = [];
 let filteredTransactions = [];
+let selectedAccount = null; // Cuenta seleccionada para filtrar
 
 // Cargar datos del servidor
 async function loadTransactions() {
     try {
         const response = await fetch('/api/movimientos');
         const data = await response.json();
-        
+
         console.log('Datos recibidos del servidor:', data); // Debug
-        
+
         // Convertir datos al formato del libro diario
         transactions = data.map((item, index) => {
             const monto = parseFloat(item.monto) || 0;
             const esDebito = item.debeHaber === 'debe';
-            
+
             return {
                 id: item.id || index + 1,
                 date: parseDate(item.fecha),
@@ -34,11 +35,12 @@ async function loadTransactions() {
 
         // Ordenar por fecha (más recientes primero)
         transactions.sort((a, b) => b.date - a.date);
-        
+
         applyFilters();
         renderTransactions();
         updateIndicators();
-        
+        renderTopAccounts(transactions); // Renderizar cuentas solo una vez al cargar
+
     } catch (error) {
         console.error('Error al cargar transacciones:', error);
         showAlert('Error al cargar los datos', 'danger');
@@ -56,23 +58,77 @@ function applyFilters() {
         const transactionDate = transaction.date.toISOString().split('T')[0];
         if (dateFrom && transactionDate < dateFrom) return false;
         if (dateTo && transactionDate > dateTo) return false;
-        
+
         // Filtro por búsqueda
         if (searchTerm && !transaction.description.toLowerCase().includes(searchTerm)) {
             return false;
         }
-        
+
+        // Filtro por cuenta seleccionada
+        if (selectedAccount && transaction.account !== selectedAccount) {
+            return false;
+        }
+
         return true;
     });
 }
 
-// Renderizar transacciones
+/**
+ * Establece el filtro por cuenta
+ * @param {string|null} accountId - ID de la cuenta a filtrar, null para limpiar
+ */
+function filterByAccount(accountId) {
+    selectedAccount = accountId;
+    applyFilters();
+    renderTransactions();
+    updateIndicators(); // Actualizar indicadores con el filtro aplicado
+    updateAccountFilterBadge();
+}
+
+/**
+ * Actualiza el badge visual que indica el filtro activo
+ */
+function updateAccountFilterBadge() {
+    const searchInput = document.getElementById('searchInput');
+    let badge = document.getElementById('accountFilterBadge');
+
+    if (selectedAccount) {
+        // Encontrar el nombre de la cuenta
+        const transaction = transactions.find(t => t.account === selectedAccount);
+        const accountName = transaction ? transaction.account_name : selectedAccount;
+        const accountColor = transaction ? transaction.account_color : '#6c757d';
+
+        if (!badge) {
+            // Crear el badge si no existe
+            badge = document.createElement('div');
+            badge.id = 'accountFilterBadge';
+            badge.className = 'mt-2';
+            searchInput.parentElement.appendChild(badge);
+        }
+
+        badge.innerHTML = `
+            <span class="badge d-inline-flex align-items-center" style="background-color: ${accountColor}; color: ${getContrastTextColor(accountColor)}; font-size: 0.875rem;">
+                <i class="bi bi-funnel-fill me-2"></i>
+                Filtrando por: ${accountName}
+                <button type="button" class="btn-close btn-close-white btn-sm ms-2" 
+                        onclick="filterByAccount(null)" 
+                        style="font-size: 0.6rem; opacity: 0.8;"
+                        title="Limpiar filtro"></button>
+            </span>
+        `;
+    } else if (badge) {
+        // Remover el badge si no hay filtro
+        badge.remove();
+    }
+}
+
+// Aplicar filtros
 function renderTransactions() {
     const tbody = document.getElementById('transactionTable');
     const template = document.getElementById('transaction-row-template').content;
-    
+
     tbody.innerHTML = '';
-    
+
     if (filteredTransactions.length === 0) {
         tbody.innerHTML = `
             <tr>
@@ -84,29 +140,29 @@ function renderTransactions() {
         `;
         return;
     }
-    
+
     filteredTransactions.forEach(transaction => {
         const row = document.importNode(template, true);
-        
+
         // Llenar datos
         row.querySelector('.date').textContent = formatDate(transaction.date);
-        
+
         // Descripción con indicador de transferencia
-        const description = transaction.banco_destino ? 
-            `${transaction.description} → ${transaction.banco_destino}` : 
+        const description = transaction.banco_destino ?
+            `${transaction.description} → ${transaction.banco_destino}` :
             transaction.description;
         row.querySelector('.description').textContent = description;
-        
+
         const accountBadge = row.querySelector('.account-badge');
-        
+
         // Usar los datos que vienen del backend
         accountBadge.textContent = transaction.account_name || transaction.account || 'Sin Banco';
         accountBadge.style.backgroundColor = transaction.account_color || '#6c757d';
-        
+
         // Calcular color de texto según el brillo del color de fondo
         accountBadge.style.color = getContrastTextColor(transaction.account_color || '#6c757d');
         accountBadge.className = 'badge';
-        
+
         // Columna de monto unificada con signo, color e ícono
         const amountCell = row.querySelector('.amount');
         const isPositive = transaction.debit > 0;
@@ -114,123 +170,90 @@ function renderTransactions() {
         const sign = isPositive ? '+' : '−';
         const icon = isPositive ? '<i class="bi bi-arrow-up-circle me-1"></i>' : '<i class="bi bi-arrow-down-circle me-1"></i>';
         const colorClass = isPositive ? 'text-success' : 'text-danger';
-        
+
         amountCell.innerHTML = `${icon}<span class="${colorClass} fw-bold">${sign} ${formatCurrency(amountValue)}</span>`;
-        
+
         // Eventos de botones
         const editBtn = row.querySelector('.edit-btn');
         const deleteBtn = row.querySelector('.delete-btn');
-        
+
         editBtn.addEventListener('click', () => editTransaction(transaction.id));
         deleteBtn.addEventListener('click', () => deleteTransaction(transaction.id));
-        
+
         tbody.appendChild(row);
     });
 }
 
 // Actualizar indicadores principales y secundarios
 function updateIndicators() {
-    // Calcular saldo total (todas las transacciones)
-    const totalBalance = transactions.reduce((sum, t) => sum + t.amount, 0);
-    
+    // IMPORTANTE: Usar filteredTransactions para que los indicadores se adapten al filtro
+    const transactionsToUse = filteredTransactions.length > 0 || selectedAccount ||
+        document.getElementById('dateFrom').value ||
+        document.getElementById('dateTo').value ||
+        document.getElementById('searchInput').value
+        ? filteredTransactions
+        : transactions;
+
+    // Calcular saldo total (transacciones filtradas o todas)
+    const totalBalance = transactionsToUse.reduce((sum, t) => sum + t.amount, 0);
+
     // Obtener mes actual
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    
-    // Filtrar transacciones del mes actual
-    const currentMonthTransactions = transactions.filter(t => {
+
+    // Filtrar transacciones del mes actual dentro del conjunto filtrado
+    const currentMonthTransactions = transactionsToUse.filter(t => {
         return t.date.getMonth() === currentMonth && t.date.getFullYear() === currentYear;
     });
-    
+
     // Calcular ingresos y gastos del mes
     const monthlyIncome = currentMonthTransactions
         .filter(t => t.debit > 0)
         .reduce((sum, t) => sum + t.debit, 0);
-    
+
     const monthlyExpenses = currentMonthTransactions
         .filter(t => t.credit > 0)
         .reduce((sum, t) => sum + t.credit, 0);
-    
+
     // Actualizar indicadores principales
     const totalBalanceEl = document.getElementById('totalBalance');
     totalBalanceEl.textContent = formatCurrency(totalBalance);
     totalBalanceEl.className = `mb-0 fw-bold ${totalBalance >= 0 ? 'text-white' : 'text-warning'}`;
-    
+
     document.getElementById('monthlyIncome').textContent = formatCurrency(monthlyIncome);
     document.getElementById('monthlyExpenses').textContent = formatCurrency(monthlyExpenses);
-    
-    // Calcular saldo por cuenta
-    const accountBalances = {};
-    transactions.forEach(t => {
-        const account = t.account;
-        if (!accountBalances[account]) {
-            accountBalances[account] = {
-                name: t.account_name || t.account,
-                color: t.account_color || '#6c757d',
-                balance: 0
-            };
-        }
-        accountBalances[account].balance += t.amount;
-    });
-    
-    // Ordenar cuentas por saldo (mayor a menor) y tomar top 3
-    const topAccounts = Object.values(accountBalances)
-        .sort((a, b) => b.balance - a.balance)
-        .slice(0, 3);
-    
-    // Renderizar top 3 cuentas
-    const topAccountsContainer = document.getElementById('topAccountsContainer');
-    topAccountsContainer.innerHTML = '';
-    
-    topAccounts.forEach((account, index) => {
-        const balanceColor = account.balance >= 0 ? '#10b981' : '#ef4444';
-        const col = document.createElement('div');
-        col.className = 'col-md-4';
-        col.innerHTML = `
-            <div class="card bg-secondary bg-opacity-50">
-                <div class="card-body text-center py-2">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <span class="badge" style="background-color: ${account.color}; color: ${getContrastTextColor(account.color)}">
-                            ${account.name}
-                        </span>
-                    </div>
-                    <h5 class="mb-0 mt-2 fw-bold" style="color: ${balanceColor}">
-                        ${formatCurrency(account.balance)}
-                    </h5>
-                </div>
-            </div>
-        `;
-        topAccountsContainer.appendChild(col);
-    });
+
+    // Renderizar top 3 cuentas (siempre usa todas las transacciones para el contexto general)
+    // renderTopAccounts(transactions); // MOVIDO: Se llama solo en loadTransactions para evitar re-render innecesario
 }
 
 // Inicializar fechas de filtro por defecto
 function initializeDateFilters() {
     const now = new Date();
-    
+
     // Último día del mes anterior (día de cobro)
     const lastDayOfPreviousMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-    
+
     // Último día del mes actual
     const lastDayOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    
+
     // Anteúltimo día del mes actual (último día menos 1)
     const secondToLastDayOfCurrentMonth = new Date(lastDayOfCurrentMonth);
     secondToLastDayOfCurrentMonth.setDate(lastDayOfCurrentMonth.getDate() - 1);
-    
+
     // Formatear fechas para input type="date" (YYYY-MM-DD)
     const dateFrom = lastDayOfPreviousMonth.toISOString().split('T')[0];
     const dateTo = secondToLastDayOfCurrentMonth.toISOString().split('T')[0];
-    
+
     // Establecer valores en los campos
     const dateFromInput = document.getElementById('dateFrom');
     const dateToInput = document.getElementById('dateTo');
-    
+
     if (dateFromInput && !dateFromInput.value) {
         dateFromInput.value = dateFrom;
     }
-    
+
     if (dateToInput && !dateToInput.value) {
         dateToInput.value = dateTo;
     }
@@ -242,7 +265,7 @@ function showAddTransactionModal() {
     document.getElementById('transactionForm').reset();
     document.getElementById('transactionId').value = '';
     document.getElementById('transactionDate').value = new Date().toISOString().split('T')[0];
-    
+
     const modal = new bootstrap.Modal(document.getElementById('addTransactionModal'));
     modal.show();
 }
@@ -383,9 +406,9 @@ function showAlert(message, type = 'info') {
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
-    
+
     document.body.appendChild(alertDiv);
-    
+
     // Auto-remover después de 3 segundos
     setTimeout(() => {
         alertDiv.remove();
@@ -393,37 +416,45 @@ function showAlert(message, type = 'info') {
 }
 
 // Eventos
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Inicializar fechas de filtro por defecto
     initializeDateFilters();
-    
+
     // Cargar datos iniciales
     loadTransactions();
-    
+
     // Inicializar partículas
     if (typeof particlesJS !== 'undefined') {
         particlesJS.load('particles-js', 'js/particles/particlesjs-config.json');
     }
-    
+
     // Event listeners
     document.getElementById('refresh-button').addEventListener('click', loadTransactions);
-    
+
     // Filtros
     document.getElementById('dateFrom').addEventListener('change', () => {
         applyFilters();
         renderTransactions();
+        updateIndicators(); // Actualizar indicadores cuando cambian los filtros
     });
-    
+
     document.getElementById('dateTo').addEventListener('change', () => {
         applyFilters();
         renderTransactions();
+        updateIndicators(); // Actualizar indicadores cuando cambian los filtros
     });
-    
+
     document.getElementById('searchInput').addEventListener('input', () => {
         applyFilters();
         renderTransactions();
+        updateIndicators(); // Actualizar indicadores cuando cambian los filtros
     });
-    
+
+    // Inicializar listeners de cuentas (definido en accounts.js)
+    if (typeof initializeAccountsListeners === 'function') {
+        initializeAccountsListeners();
+    }
+
     // Modal y formularios
     /* const addTransactionBtn = document.querySelector('[data-bs-target="#addTransactionModal"]');
     if (addTransactionBtn) {

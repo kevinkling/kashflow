@@ -95,12 +95,29 @@ body {
 }
 
 /* Badges para cuentas */
-.badge.bg-primary { background: var(--uala-gradient) !important; }
-.badge.bg-info { background: var(--mercadopago-gradient) !important; }
-.badge.bg-secondary { background: var(--bbva-gradient) !important; }
-.badge.bg-success { background: var(--lemon-gradient) !important; }
-.badge.bg-warning { background: var(--naranjax-gradient) !important; }
-.badge.bg-danger { background: var(--efectivo-gradient) !important; }
+.badge.bg-primary {
+  background: var(--uala-gradient) !important;
+}
+
+.badge.bg-info {
+  background: var(--mercadopago-gradient) !important;
+}
+
+.badge.bg-secondary {
+  background: var(--bbva-gradient) !important;
+}
+
+.badge.bg-success {
+  background: var(--lemon-gradient) !important;
+}
+
+.badge.bg-warning {
+  background: var(--naranjax-gradient) !important;
+}
+
+.badge.bg-danger {
+  background: var(--efectivo-gradient) !important;
+}
 
 /* Modal personalizado */
 .modal-content {
@@ -120,13 +137,15 @@ body {
   background-color: var(--bg-card);
 }
 
-.form-control, .form-select {
+.form-control,
+.form-select {
   background-color: var(--bg-table-header);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
 }
 
-.form-control:focus, .form-select:focus {
+.form-control:focus,
+.form-select:focus {
   background-color: var(--bg-table-hover);
   border-color: var(--turquesa-claro);
   box-shadow: 0 0 0 0.2rem rgba(92, 225, 230, 0.25);
@@ -196,37 +215,37 @@ body {
     opacity: 0;
     transform: translateY(30px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-.card, .table {
-  animation: fadeInUp 0.4s ease;
-}
+/* .card, .table animation removed */
 
 /* Responsive */
 @media (max-width: 768px) {
   .container-lg {
     padding: 0 10px;
   }
-  
+
   .table-responsive {
     font-size: 0.875rem;
   }
-  
+
   .btn {
     font-size: 0.875rem;
     padding: 0.5rem 1rem;
   }
-  
+
   h1 {
     font-size: 1.5rem;
   }
 }
 
 @media (max-width: 576px) {
+
   .table th:nth-child(4),
   .table td:nth-child(4) {
     font-size: 0.8rem;
@@ -238,22 +257,27 @@ body {
   background: var(--uala-gradient);
   box-shadow: 0 0 20px var(--uala-glow);
 }
+
 .mercadopago .card-header {
   background: var(--mercadopago-gradient);
   box-shadow: 0 0 20px var(--mercadopago-glow);
 }
+
 .bbva .card-header {
   background: var(--bbva-gradient);
   box-shadow: 0 0 20px var(--bbva-glow);
 }
+
 .lemon .card-header {
   background: var(--lemon-gradient);
   box-shadow: 0 0 20px var(--lemon-glow);
 }
+
 .naranjax .card-header {
   background: var(--naranjax-gradient);
   box-shadow: 0 0 20px var(--naranjax-glow);
 }
+
 .efectivo .card-header {
   background: var(--efectivo-gradient);
   box-shadow: 0 0 20px var(--efectivo-glow);
@@ -266,12 +290,15 @@ body {
 .amount.positive {
   color: var(--color-positive);
 }
+
 .amount.negative {
   color: var(--color-negative);
 }
 
 /* Indicadores */
-#totalBalance, #monthlyIncome, #monthlyExpenses {
+#totalBalance,
+#monthlyIncome,
+#monthlyExpenses {
   font-size: 1.5rem;
   letter-spacing: 0.5px;
 }
@@ -288,4 +315,166 @@ body {
 #topAccountsContainer h5 {
   font-size: 1.2rem;
   font-weight: 700;
+}
+
+/* Botón Ver Todos */
+.btn-outline-light:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Modal de cuentas */
+#allAccountsModal .modal-content {
+  border: 1px solid var(--border-color);
+}
+
+#allAccountsModal .table th,
+#allAccountsModal .table td {
+  vertical-align: middle;
+  padding: 0.75rem;
+}
+
+#allAccountsModal .badge {
+  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem;
+}
+
+/* Estilos para modal de todas las cuentas con scroll */
+#allAccountsModal .table-responsive {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) rgba(0, 0, 0, 0.2);
+}
+
+#allAccountsModal .table-responsive::-webkit-scrollbar {
+  width: 8px;
+}
+
+#allAccountsModal .table-responsive::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+#allAccountsModal .table-responsive::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+#allAccountsModal .table-responsive::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+#allAccountsModal thead.sticky-top {
+  z-index: 1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Cuentas clickeables */
+.account-card {
+  position: relative;
+}
+
+.account-card:hover::after {
+  opacity: 1;
+}
+
+#allAccountsModal .account-row {
+  transition: background-color 0.2s ease;
+}
+
+#allAccountsModal .account-row:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Badge de filtro activo */
+/* #accountFilterBadge animation removed */
+
+/* @keyframes slideIn removed */
+
+#accountFilterBadge .btn-close {
+  padding: 0.25rem;
+  margin-left: 0.5rem;
+}
+
+#accountFilterBadge .btn-close:hover {
+  opacity: 1 !important;
+}
+
+/* Animaciones de transición suave para transacciones */
+#transactionTable tbody.fade-out {
+  opacity: 0;
+  transition: opacity 0.15s ease-out;
+}
+
+#transactionTable tbody tr.fade-in {
+  animation: fadeInUp 0.4s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* Transición suave para el hover de las filas */
+#transactionTable tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+/* Efecto de pulso sutil en el badge de filtro */
+#accountFilterBadge .badge {
+  /* animation: slideIn 0.3s ease, pulse 2s ease-in-out 0.3s; Removed slideIn */
+  animation: pulse 2s ease-in-out 0.3s;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* Mejorar el indicador visual de elementos clickeables */
+.account-card,
+.account-row {
+  user-select: none;
+}
+
+.account-card:active {
+  transform: scale(0.98) translateY(-3px);
+}
+
+/* Transición suave para toda la tabla */
+#transactionTable {
+  transition: all 0.2s ease;
+}
+
+/* Badge de indicador filtrado */
+.card-title .badge {
+  vertical-align: middle;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
 }

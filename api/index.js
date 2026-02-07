@@ -34,9 +34,12 @@ const app = express();
 const db = require('./services/db.js');
 const telegramRoutes = require('./routes/telegram.js');
 const webRoutes = require('./routes/web.js');
+const cuentasRoutes = require('./routes/cuentas.js');
 
 // Importar bot para configurar webhook
 const { bot: telegramBot } = require('./bots/telegramBot.js');
+
+
 
 
 const PORT = process.env.API_PORT || 3000;
@@ -63,7 +66,7 @@ if (webhookUrl) {
         })
         .catch(err => {
             console.error('❌ Error configurando webhook:', err.message);
-    console.log(fullWebhookUrl)
+            console.log(fullWebhookUrl)
 
         });
 } else {

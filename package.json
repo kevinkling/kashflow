@@ -22,10 +22,15 @@
     "api"
   ],
   "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "axios": "^1.13.4",
     "better-sqlite3": "^11.8.1",
     "dotenv": "17.2.1",
     "express": "5.1.0",
+    "form-data": "^4.0.5",
+    "node-fetch": "^3.3.2",
     "node-telegram-bot-api": "0.66.0",
+    "openai": "^6.18.0",
     "xlsx": "0.18.5"
   }
 }

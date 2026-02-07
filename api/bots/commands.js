@@ -95,4 +95,153 @@ module.exports = bot => ({
     // Enviar el mensaje al usuario
     await bot.sendMessage(chatId, mensaje, { parse_mode: "Markdown" });
   },
+
+  voz: async msg => {
+    const chatId = msg.chat.id;
+    const whisperService = require("../services/whisperService");
+    const transactionParser = require("../services/transactionParser");
+    const { obtenerOCrearUsuario, obtenerCuentaPorAlias, registrarTransaccion, registrarTransferencia } = require("../services/dbHelper");
+
+    try {
+      // Notificar que se está procesando
+      await bot.sendMessage(chatId, "🎤 Procesando tu mensaje de voz...");
+
+      // Transcribir el audio
+      const transcripcion = await whisperService.transcribeVoiceMessage(bot, msg);
+      
+      // Mostrar transcripción al usuario
+      await bot.sendMessage(chatId, `📝 Escuché: "${transcripcion}"`);
+
+      // Parsear la transcripción
+      const parsedTransaction = transactionParser.parse(transcripcion);
+
+      // Si no es válida, mostrar errores
+      if (!parsedTransaction.valido) {
+        const mensajeError = `❌ No pude procesar la transacción:\n${parsedTransaction.errores.join('\n')}\n\n` +
+                           `Intenta de nuevo con más detalles.`;
+        await bot.sendMessage(chatId, mensajeError);
+        return;
+      }
+
+      // Mostrar resumen y pedir confirmación
+      const resumen = transactionParser.generarResumen(parsedTransaction);
+      await bot.sendMessage(chatId, `${resumen}\n\n¿Es correcto? (Responde Sí/No)`, {
+        reply_markup: {
+          keyboard: [['✅ Sí', '❌ No']],
+          one_time_keyboard: true,
+          resize_keyboard: true
+        }
+      });
+
+      // Guardar datos temporalmente para confirmar después
+      // (En una implementación más robusta, usarías una base de datos temporal o Redis)
+      global.pendingTransactions = global.pendingTransactions || {};
+      global.pendingTransactions[chatId] = parsedTransaction;
+
+    } catch (error) {
+      console.error('❌ Error procesando mensaje de voz:', error);
+      await bot.sendMessage(chatId, `❌ Error al procesar el audio: ${error.message}\n\nAsegúrate de que Whisper esté instalado correctamente.`);
+    }
+  },
+
+  confirmarTransaccion: async msg => {
+    const chatId = msg.chat.id;
+    const texto = msg.text.toLowerCase();
+
+    // Verificar si hay una transacción pendiente
+    if (!global.pendingTransactions || !global.pendingTransactions[chatId]) {
+      return; // No hay transacción pendiente, ignorar
+    }
+
+    const parsedTransaction = global.pendingTransactions[chatId];
+
+    try {
+      if (texto.includes('sí') || texto.includes('si') || texto.includes('✅')) {
+        // Confirmar y registrar la transacción
+        const { obtenerOCrearUsuario, obtenerCuentaPorAlias, registrarTransaccion, registrarTransferencia } = require("../services/dbHelper");
+
+        // Obtener o crear usuario
+        const usuarioId = await obtenerOCrearUsuario(msg.from.id, msg.from.first_name);
+
+        if (parsedTransaction.tipo === 'transferencia') {
+          // Transferencia
+          const cuentaOrigen = await obtenerCuentaPorAlias(parsedTransaction.cuentaOrigen);
+          const cuentaDestino = await obtenerCuentaPorAlias(parsedTransaction.cuentaDestino);
+
+          if (!cuentaOrigen) {
+            await bot.sendMessage(chatId, `❌ No encontré la cuenta origen: "${parsedTransaction.cuentaOrigen}"`);
+            delete global.pendingTransactions[chatId];
+            return;
+          }
+
+          if (!cuentaDestino) {
+            await bot.sendMessage(chatId, `❌ No encontré la cuenta destino: "${parsedTransaction.cuentaDestino}"`);
+            delete global.pendingTransactions[chatId];
+            return;
+          }
+
+          await registrarTransferencia(
+            cuentaOrigen.id,
+            cuentaDestino.id,
+            parsedTransaction.monto,
+            parsedTransaction.descripcion
+          );
+
+          await bot.sendMessage(chatId, `✅ Transferencia registrada exitosamente!\n\n💰 $${parsedTransaction.monto.toLocaleString('es-AR')} de ${cuentaOrigen.nombre} a ${cuentaDestino.nombre}`, {
+            reply_markup: { remove_keyboard: true }
+          });
+
+        } else {
+          // Ingreso o Egreso
+          const cuenta = await obtenerCuentaPorAlias(parsedTransaction.cuenta);
+
+          if (!cuenta) {
+            await bot.sendMessage(chatId, `❌ No encontré la cuenta: "${parsedTransaction.cuenta}"`);
+            delete global.pendingTransactions[chatId];
+            return;
+          }
+
+          const tipo = parsedTransaction.tipo === 'ingreso' ? 'debe' : 'haber';
+          
+          await registrarTransaccion(
+            cuenta.id,
+            tipo,
+            parsedTransaction.monto,
+            parsedTransaction.descripcion,
+            null,
+            msg.message_id
+          );
+
+          const tipoTexto = parsedTransaction.tipo === 'ingreso' ? 'Ingreso' : 'Egreso';
+          await bot.sendMessage(chatId, `✅ ${tipoTexto} registrado exitosamente!\n\n💰 $${parsedTransaction.monto.toLocaleString('es-AR')} en ${cuenta.nombre}`, {
+            reply_markup: { remove_keyboard: true }
+          });
+        }
+
+        // Limpiar transacción pendiente
+        delete global.pendingTransactions[chatId];
+
+      } else if (texto.includes('no') || texto.includes('❌')) {
+        // Cancelar
+        await bot.sendMessage(chatId, '❌ Transacción cancelada. Envía otro mensaje de voz si deseas registrar algo.', {
+          reply_markup: { remove_keyboard: true }
+        });
+        delete global.pendingTransactions[chatId];
+      }
+    } catch (error) {
+      console.error('❌ Error confirmando transacción:', error);
+      await bot.sendMessage(chatId, `❌ Error al registrar la transacción: ${error.message}`, {
+        reply_markup: { remove_keyboard: true }
+      });
+      delete global.pendingTransactions[chatId];
+    }
+  },
+
+  ayudaVoz: async msg => {
+    const chatId = msg.chat.id;
+    const transactionParser = require("../services/transactionParser");
+    
+    const ejemplos = transactionParser.constructor.generarEjemplos();
+    await bot.sendMessage(chatId, ejemplos, { parse_mode: "Markdown" });
+  },
 });

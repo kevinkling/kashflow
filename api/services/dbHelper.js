@@ -91,6 +91,121 @@ async function crearCuenta(usuarioId, nombre, alias, color = '#4CAF50', moneda =
   }
 }
 
+/**
+ * Obtener todas las cuentas con sus saldos
+ */
+async function obtenerTodasLasCuentasConSaldos() {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM vista_saldos_cuentas ORDER BY saldo_actual DESC'
+    );
+    return result.rows;
+  } catch (error) {
+    console.error('❌ Error al obtener cuentas con saldos:', error);
+    throw error;
+  }
+}
+
+/**
+ * Obtener cuenta por ID
+ */
+async function obtenerCuentaPorId(id) {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM cuentas WHERE id = ?',
+      [id]
+    );
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('❌ Error al obtener cuenta por ID:', error);
+    throw error;
+  }
+}
+
+/**
+ * Actualizar una cuenta existente
+ */
+async function actualizarCuenta(id, { nombre, alias, color, moneda, activa }) {
+  try {
+    const updates = [];
+    const values = [];
+
+    if (nombre !== undefined) {
+      updates.push('nombre = ?');
+      values.push(nombre);
+    }
+    if (alias !== undefined) {
+      updates.push('alias = ?');
+      values.push(alias);
+    }
+    if (color !== undefined) {
+      updates.push('color = ?');
+      values.push(color);
+    }
+    if (moneda !== undefined) {
+      updates.push('moneda = ?');
+      values.push(moneda);
+    }
+    if (activa !== undefined) {
+      updates.push('activa = ?');
+      values.push(activa ? 1 : 0);
+    }
+
+    if (updates.length === 0) {
+      throw new Error('No hay campos para actualizar');
+    }
+
+    values.push(id);
+
+    await pool.query(
+      `UPDATE cuentas SET ${updates.join(', ')} WHERE id = ?`,
+      values
+    );
+
+    console.log(`✅ Cuenta ID ${id} actualizada exitosamente`);
+  } catch (error) {
+    console.error('❌ Error al actualizar cuenta:', error);
+    throw error;
+  }
+}
+
+/**
+ * Archivar una cuenta (soft delete)
+ */
+async function archivarCuenta(id) {
+  try {
+    await pool.query(
+      'UPDATE cuentas SET activa = 0 WHERE id = ?',
+      [id]
+    );
+    console.log(`✅ Cuenta ID ${id} archivada exitosamente`);
+  } catch (error) {
+    console.error('❌ Error al archivar cuenta:', error);
+    throw error;
+  }
+}
+
+/**
+ * Validar que un alias sea único (excluyendo una cuenta específica)
+ */
+async function validarAliasUnico(alias, cuentaIdExcluir = null) {
+  try {
+    let query = 'SELECT id FROM cuentas WHERE UPPER(alias) = UPPER(?)';
+    const params = [alias];
+
+    if (cuentaIdExcluir !== null) {
+      query += ' AND id != ?';
+      params.push(cuentaIdExcluir);
+    }
+
+    const result = await pool.query(query, params);
+    return result.rows.length === 0; // true si es único
+  } catch (error) {
+    console.error('❌ Error al validar alias:', error);
+    throw error;
+  }
+}
+
 // ============================================================================
 // FUNCIONES DE TRANSACCIONES
 // ============================================================================
@@ -276,19 +391,24 @@ async function calcularSaldoCuenta(cuentaId) {
 // EXPORTS
 // ============================================================================
 
-module.exports = { 
+module.exports = {
   // Usuarios
   obtenerOCrearUsuario,
-  
+
   // Cuentas
   obtenerCuentaPorAlias,
   obtenerCuentasUsuario,
   crearCuenta,
-  
+  obtenerTodasLasCuentasConSaldos,
+  obtenerCuentaPorId,
+  actualizarCuenta,
+  archivarCuenta,
+  validarAliasUnico,
+
   // Transacciones
   registrarTransaccion,
   registrarTransferencia,
-  
+
   // Consultas
   consultarUltimoDepositoSueldo,
   consultarSaldosPorCuenta,

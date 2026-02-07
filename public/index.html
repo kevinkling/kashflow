@@ -25,9 +25,9 @@
           </h1>
         </div>
         <div class="col-md-4 text-end">
-          <!-- <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#addTransactionModal">
-            <i class="bi bi-plus-lg me-2"></i>Nueva Transacción
-          </button> -->
+          <button id="manage-accounts-button" class="btn btn-outline-info me-2" title="Gestionar Cuentas">
+            <i class="bi bi-bank me-2"></i>Gestionar Cuentas
+          </button>
           <button id="refresh-button" class="btn btn-outline-light" title="Actualizar">
             <i class="bi bi-arrow-clockwise"></i>
           </button>
@@ -182,6 +182,118 @@
       </div>
     </div>
 
+    <!-- Modal para Gestionar Cuentas -->
+    <div class="modal fade" id="manageAccountsModal" tabindex="-1" aria-labelledby="manageAccountsModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-xl">
+        <div class="modal-content bg-dark">
+          <div class="modal-header border-secondary">
+            <h5 class="modal-title text-white" id="manageAccountsModalLabel">
+              <i class="bi bi-bank me-2"></i>Gestión de Cuentas
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h6 class="text-white mb-0">Cuentas Registradas</h6>
+              <button class="btn btn-success" id="newAccountBtn">
+                <i class="bi bi-plus-lg me-2"></i>Nueva Cuenta
+              </button>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-dark table-hover mb-0">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Alias</th>
+                    <th>Color</th>
+                    <th>Moneda</th>
+                    <th>Usuario</th>
+                    <th class="text-end">Saldo</th>
+                    <th class="text-center">Estado</th>
+                    <th class="text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="accountsManagementTableBody">
+                  <!-- Se llenará dinámicamente -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal para Crear/Editar Cuenta -->
+    <div class="modal fade" id="accountFormModal" tabindex="-1" aria-labelledby="accountFormModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content bg-dark">
+          <div class="modal-header border-secondary">
+            <h5 class="modal-title text-white" id="accountFormModalLabel">
+              <i class="bi bi-plus-circle me-2"></i>Nueva Cuenta
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form id="accountForm">
+              <input type="hidden" id="accountId">
+              
+              <div class="mb-3">
+                <label for="accountUsuario" class="form-label text-white">Usuario:</label>
+                <select class="form-select" id="accountUsuario" required>
+                  <option value="">Seleccionar usuario...</option>
+                  <!-- Se llenará dinámicamente -->
+                </select>
+              </div>
+              
+              <div class="mb-3">
+                <label for="accountNombre" class="form-label text-white">Nombre de la Cuenta:</label>
+                <input type="text" class="form-control" id="accountNombre" placeholder="Ej: Banco BBVA Francés" required>
+              </div>
+              
+              <div class="mb-3">
+                <label for="accountAlias" class="form-label text-white">Alias (para mensajes):</label>
+                <input type="text" class="form-control" id="accountAlias" placeholder="Ej: BBVA" required>
+                <small class="text-muted">Este es el nombre corto que usarás en los mensajes de Telegram</small>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="accountColor" class="form-label text-white">Color:</label>
+                    <input type="color" class="form-control form-control-color" id="accountColor" value="#4CAF50" required>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="accountMoneda" class="form-label text-white">Moneda:</label>
+                    <select class="form-select" id="accountMoneda" required>
+                      <option value="ARS">ARS - Peso Argentino</option>
+                      <option value="USD">USD - Dólar</option>
+                      <option value="EUR">EUR - Euro</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="alert alert-info" role="alert">
+                <i class="bi bi-info-circle me-2"></i>
+                El alias debe ser único y se usará para registrar transacciones desde Telegram
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-success" id="saveAccountBtn">
+              <i class="bi bi-save me-2"></i>Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal para Agregar/Editar Transacción -->
     <!-- <div class="modal fade" id="addTransactionModal" tabindex="-1" aria-labelledby="addTransactionModalLabel" aria-hidden="true">
       <div class="modal-dialog">
@@ -265,6 +377,7 @@
     <script src="js/particles/particles.min.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/accounts.js"></script>
+    <script src="js/accounts-crud.js"></script>
     <script src="js/journal.js"></script>
   </body>
 </html>

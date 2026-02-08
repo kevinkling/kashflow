@@ -45,12 +45,14 @@ const { bot: telegramBot } = require('./bots/telegramBot.js');
 const PORT = process.env.API_PORT || 3000;
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Servir archivos estáticos desde la carpeta "public"
+// Servir archivos estáticos
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Rutas de la API
+// Rutas de la API - DESPUÉS del middleware - Las rutas más específicas deben ir PRIMERO
 app.use('/kashflow/telegram', telegramRoutes);
+app.use('/api/cuentas', cuentasRoutes);
 app.use('/api', webRoutes);
 
 // Configurar webhook de Telegram al iniciar

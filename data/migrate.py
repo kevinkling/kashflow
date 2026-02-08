@@ -10,6 +10,7 @@ import sqlite3
 import os
 import re
 import sys
+import glob
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -234,6 +235,10 @@ class MigrationManager:
 
 
 def main():
+    # Leer rutas desde variables de entorno con fallbacks para desarrollo
+    DB_PATH = os.getenv("DB_PATH", os.path.join(os.path.dirname(__file__), "kashflow.db"))
+    UPDATES_DIR = os.getenv("UPDATES_DIR", os.path.join(os.path.dirname(__file__), "updates"))
+    
     # Obtener DATA_DIR de variable de entorno (sin valor por defecto)
     DATA_DIR = os.getenv('DATA_DIR')
     if not DATA_DIR:
@@ -241,6 +246,8 @@ def main():
         sys.exit(1)
     
     DB_PATH = os.path.join(DATA_DIR, 'kashflow.db')
+    print(f"📍 Using DB: {DB_PATH}")
+    print(f"📁 Using updates: {UPDATES_DIR}")
     
     # Verificar si existe la base de datos
     if not os.path.exists(DB_PATH):
@@ -248,7 +255,7 @@ def main():
         sys.exit(1)
     
     # Crear manager
-    manager = MigrationManager(DB_PATH)
+    manager = MigrationManager(DB_PATH, UPDATES_DIR)
     
     try:
         # Verificar argumentos

@@ -43,7 +43,7 @@ LABEL description="KashFlow - Sistema de Finanzas Personales"
 LABEL version="1.0.0"
 
 # Instalar solo SQLite runtime
-RUN apt-get update && apt-get install -y sqlite3 tzdata python3 && \
+RUN apt-get update && apt-get install -y sqlite3 tzdata python3 python3-dotenv && \
     ln -sf /usr/bin/python3 /usr/bin/python && \
     rm -rf /var/lib/apt/lists/*
 
@@ -68,6 +68,7 @@ COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
 # Copiar código fuente
 COPY --chown=nodejs:nodejs api ./api
 COPY --chown=nodejs:nodejs public ./public
+COPY --chown=nodejs:nodejs data ./scripts
 COPY --chown=nodejs:nodejs package.json ./
 
 # Cambiar al usuario no-root

@@ -10,7 +10,7 @@ let currentEditingAccountId = null;
  */
 async function loadAllAccounts() {
     try {
-        const response = await fetch('/api/cuentas');
+        const response = await fetch('/api/cuentas?gestion=true');
         if (!response.ok) throw new Error('Error al cargar cuentas');
         allAccounts = await response.json();
         renderAccountsManagementTable();
@@ -79,11 +79,18 @@ function renderAccountsManagementTable() {
         const row = document.createElement('tr');
 
         const balanceColor = account.saldo_actual >= 0 ? 'text-success' : 'text-danger';
-        const statusBadge = account.saldo_actual >= 0
-            ? '<span class="badge bg-success">Activa</span>'
-            : '<span class="badge bg-warning">Saldo Negativo</span>';
 
-        row.innerHTML = `
+        const isActive = account.activa === 1 || account.activa === true;
+        const statusBadge = isActive
+            ? '<span class="badge bg-success">Activa</span>'
+            : '<span class="badge bg-secondary">Inactiva</span>';
+
+        const toggleBtnClass = isActive ? 'btn-outline-danger' : 'btn-outline-success';
+        const toggleBtnIcon = isActive ? 'bi-toggle-on' : 'bi-toggle-off';
+        const toggleBtnTitle = isActive ? 'Desactivar' : 'Activar';
+
+        tbody.innerHTML += `
+      <tr>
       <td>${account.cuenta}</td>
       <td><code>${account.alias}</code></td>
       <td>
@@ -99,13 +106,12 @@ function renderAccountsManagementTable() {
         <button class="btn btn-sm btn-outline-warning me-1" onclick="openEditAccountModal(${account.cuenta_id})" title="Editar">
           <i class="bi bi-pencil"></i>
         </button>
-        <button class="btn btn-sm btn-outline-danger" onclick="confirmArchiveAccount(${account.cuenta_id}, '${account.alias}')" title="Archivar">
-          <i class="bi bi-archive"></i>
+        <button class="btn btn-sm ${toggleBtnClass}" onclick="toggleAccountStatus(${account.cuenta_id}, '${account.alias}', ${isActive})" title="${toggleBtnTitle}">
+          <i class="bi ${toggleBtnIcon}"></i>
         </button>
       </td>
+      </tr>
     `;
-
-        tbody.appendChild(row);
     });
 }
 
@@ -246,43 +252,63 @@ async function saveAccount() {
 }
 
 /**
- * Confirmar archivado de cuenta
+ * Alternar estado de la cuenta (Activar/Desactivar)
  */
-function confirmArchiveAccount(accountId, alias) {
-    if (confirm(`¿Estás seguro de que deseas archivar la cuenta "${alias}"?\n\nLa cuenta se marcará como inactiva y no aparecerá en las listas, pero sus transacciones se conservarán.`)) {
-        archiveAccount(accountId);
-    }
-}
+function toggleAccountStatus(accountId, alias, isActive) {
+    const action = isActive ? 'desactivar' : 'activar';
+    const message = isActive
+        ? `¿Estás seguro de que deseas desactivar la cuenta "<strong>${alias}</strong>"?<br><br>La cuenta no aparecerá en los listados generales pero sus datos se conservarán.`
+        : `¿Deseas activar nuevamente la cuenta "<strong>${alias}</strong>"?`;
 
-/**
- * Archivar cuenta
- */
-async function archiveAccount(accountId) {
-    try {
-        const response = await fetch(`/api/cuentas/${accountId}`, {
-            method: 'DELETE'
-        });
+    // Configurar el modal
+    const modalEl = document.getElementById('confirmationModal');
+    const modalTitle = document.getElementById('confirmationModalTitle');
+    const modalBody = document.getElementById('confirmationModalBody');
+    const confirmBtn = document.getElementById('confirmationModalConfirmBtn');
 
-        const result = await response.json();
+    modalTitle.textContent = isActive ? 'Desactivar Cuenta' : 'Activar Cuenta';
+    modalBody.innerHTML = message;
 
-        if (!response.ok) {
-            throw new Error(result.error || 'Error al archivar la cuenta');
+    // Configurar botón de confirmación (color y acción)
+    confirmBtn.className = isActive ? 'btn btn-danger' : 'btn btn-success';
+    confirmBtn.textContent = isActive ? 'Desactivar' : 'Activar';
+
+    // Instancia del modal
+    const modal = new bootstrap.Modal(modalEl);
+
+    // Handler para el botón de confirmar
+    // Usamos onclick para evitar acumular event listeners
+    confirmBtn.onclick = async function () {
+        modal.hide(); // Cerrar modal inmediatamente
+
+        try {
+            const response = await fetch(`/api/cuentas/${accountId}/toggle`, {
+                method: 'PUT'
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || `Error al ${action} la cuenta`);
+            }
+
+            // Mostrar mensaje de éxito
+            showAlert(result.message || `Cuenta ${action}da exitosamente`, 'success');
+
+            // Recargar cuentas
+            await loadAllAccounts();
+
+            // Recargar transacciones (por si afecta visualización)
+            if (typeof loadTransactions === 'function') {
+                loadTransactions();
+            }
+        } catch (error) {
+            console.error(`Error al ${action} cuenta:`, error);
+            showAlert(error.message, 'danger');
         }
+    };
 
-        // Mostrar mensaje de éxito
-        showAlert(result.message || 'Cuenta archivada exitosamente', 'success');
-
-        // Recargar cuentas
-        await loadAllAccounts();
-
-        // Recargar transacciones
-        if (typeof loadTransactions === 'function') {
-            loadTransactions();
-        }
-    } catch (error) {
-        console.error('Error al archivar cuenta:', error);
-        showAlert(error.message, 'danger');
-    }
+    modal.show();
 }
 
 /**

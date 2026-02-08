@@ -2,10 +2,11 @@ const express = require('express');
 const router = express.Router();
 const {
     obtenerTodasLasCuentasConSaldos,
+    obtenerTodasLasCuentasGestion,
     obtenerCuentaPorId,
     crearCuenta,
     actualizarCuenta,
-    archivarCuenta,
+    toggleCuentaActiva,
     validarAliasUnico,
     obtenerCuentasUsuario
 } = require('../services/dbHelper.js');
@@ -13,10 +14,19 @@ const pool = require('../services/db.js');
 
 // ============================================================================
 // GET /api/cuentas - Listar todas las cuentas activas con sus saldos
+// Query params: ?gestion=true (devuelve TODAS las cuentas para administración)
 // ============================================================================
 router.get('/', async (req, res) => {
     try {
-        const cuentas = await obtenerTodasLasCuentasConSaldos();
+        const { gestion } = req.query;
+        let cuentas;
+
+        if (gestion === 'true') {
+            cuentas = await obtenerTodasLasCuentasGestion();
+        } else {
+            cuentas = await obtenerTodasLasCuentasConSaldos();
+        }
+
         res.json(cuentas);
     } catch (error) {
         console.error('Error al obtener cuentas:', error);
@@ -105,6 +115,25 @@ router.post('/', async (req, res) => {
 });
 
 // ============================================================================
+// PUT /api/cuentas/:id/toggle - Alternar estado activo/inactivo
+// ============================================================================
+router.put('/:id/toggle', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const nuevoEstado = await toggleCuentaActiva(id);
+
+        res.json({
+            message: nuevoEstado ? 'Cuenta activada correctamente' : 'Cuenta desactivada correctamente',
+            activa: nuevoEstado
+        });
+    } catch (error) {
+        console.error('Error al alternar estado de cuenta:', error);
+        res.status(500).json({ error: 'Error al cambiar estado de la cuenta' });
+    }
+});
+
+// ============================================================================
 // PUT /api/cuentas/:id - Actualizar una cuenta existente
 // ============================================================================
 router.put('/:id', async (req, res) => {
@@ -145,32 +174,6 @@ router.put('/:id', async (req, res) => {
     } catch (error) {
         console.error('Error al actualizar cuenta:', error);
         res.status(500).json({ error: 'Error al actualizar la cuenta' });
-    }
-});
-
-// ============================================================================
-// DELETE /api/cuentas/:id - Archivar una cuenta (soft delete)
-// ============================================================================
-router.delete('/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        // Verificar que la cuenta existe
-        const cuenta = await obtenerCuentaPorId(id);
-        if (!cuenta) {
-            return res.status(404).json({ error: 'Cuenta no encontrada' });
-        }
-
-        // Archivar la cuenta (soft delete)
-        await archivarCuenta(id);
-
-        res.json({
-            message: 'Cuenta archivada exitosamente',
-            cuenta_id: id
-        });
-    } catch (error) {
-        console.error('Error al archivar cuenta:', error);
-        res.status(500).json({ error: 'Error al archivar la cuenta' });
     }
 });
 

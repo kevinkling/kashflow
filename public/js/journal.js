@@ -20,8 +20,8 @@ async function loadTransactions() {
                 id: item.id || index + 1,
                 date: parseDate(item.fecha),
                 description: item.descripcion,
-                account: item.banco,
-                account_name: item.banco_nombre || item.banco,
+                account: item.account_id, // Usar ID para lógica interna
+                account_name: item.banco_nombre || item.banco, // Nombre para display
                 account_color: item.banco_color || '#6c757d',
                 banco_destino: item.banco_destino,
                 amount: monto, // Ya viene con el signo correcto del backend
@@ -65,7 +65,7 @@ function applyFilters() {
         }
 
         // Filtro por cuenta seleccionada
-        if (selectedAccount && transaction.account !== selectedAccount) {
+        if (selectedAccount && transaction.account != selectedAccount) {
             return false;
         }
 

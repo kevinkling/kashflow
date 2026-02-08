@@ -11,6 +11,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="icons/favicon.ico">
     <link rel="stylesheet" href="./css/journal.css" />
+    <style>
+      /* Fix para que el modal de confirmación aparezca sobre el de gestión */
+      #confirmationModal {
+        z-index: 1060;
+      }
+    </style>
   </head>
   <body>
     <div id="particles-js" class="position-absolute top-0 start-0 w-100 h-100"></div>
@@ -34,6 +40,25 @@
         </div>
       </div>
     </header>
+
+    <!-- Modal de Confirmación Genérico -->
+    <div class="modal fade" id="confirmationModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content bg-dark">
+          <div class="modal-header border-secondary">
+            <h5 class="modal-title text-white" id="confirmationModalTitle">Confirmación</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body text-white" id="confirmationModalBody">
+            ¿Estás seguro?
+          </div>
+          <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="confirmationModalConfirmBtn">Confirmar</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Filtros y Resumen -->
     <div class="container-lg mt-4">
@@ -166,7 +191,6 @@
                   <tr>
                     <th>Cuenta</th>
                     <th class="text-end">Saldo</th>
-                    <th class="text-center">Estado</th>
                   </tr>
                 </thead>
                 <tbody id="allAccountsTableBody">

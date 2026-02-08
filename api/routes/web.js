@@ -4,8 +4,8 @@ const { consultarTodosLosMovimientos } = require('../services/dbHelper.js');
 
 // Health check endpoint para Docker
 router.get('/health', (req, res) => {
-    res.status(200).json({ 
-        status: 'ok', 
+    res.status(200).json({
+        status: 'ok',
         timestamp: new Date().toISOString(),
         uptime: process.uptime()
     });
@@ -15,12 +15,13 @@ router.get('/health', (req, res) => {
 router.get('/movimientos', async (req, res) => {
     try {
         const movimientos = await consultarTodosLosMovimientos();
-        
+
         // Mapear los datos al formato que espera el frontend
         const movimientosMapeados = movimientos.map(m => ({
             id: m.id,
             fecha: m.fecha_hora,
             descripcion: m.descripcion,
+            account_id: m.cuenta_id, // ID de la cuenta para filtrado robusto
             banco: m.cuenta_alias || m.cuenta, // Usar alias primero, luego nombre
             banco_nombre: m.cuenta, // Nombre completo del banco
             banco_color: m.cuenta_color || '#6c757d', // Color del banco (con fallback)
@@ -28,7 +29,7 @@ router.get('/movimientos', async (req, res) => {
             monto: m.monto_con_signo, // Ya incluye el signo (+/-)
             debeHaber: m.tipo // 'debe' o 'haber'
         }));
-        
+
         res.json(movimientosMapeados);
     } catch (err) {
         console.error(err.message);

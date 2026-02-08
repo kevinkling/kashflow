@@ -92,7 +92,7 @@ async function crearCuenta(usuarioId, nombre, alias, color = '#4CAF50', moneda =
 }
 
 /**
- * Obtener todas las cuentas con sus saldos
+ * Obtener todas las cuentas con sus saldos (SOLO ACTIVAS - Para vista general)
  */
 async function obtenerTodasLasCuentasConSaldos() {
   try {
@@ -102,6 +102,21 @@ async function obtenerTodasLasCuentasConSaldos() {
     return result.rows;
   } catch (error) {
     console.error('❌ Error al obtener cuentas con saldos:', error);
+    throw error;
+  }
+}
+
+/**
+ * Obtener todas (activas e inactivas) las cuentas con sus saldos
+ */
+async function obtenerTodasLasCuentasGestion() {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM vista_saldos_cuentas_admin ORDER BY activa DESC, cuenta ASC'
+    );
+    return result.rows;
+  } catch (error) {
+    console.error('❌ Error al obtener cuentas gestión:', error);
     throw error;
   }
 }
@@ -169,18 +184,27 @@ async function actualizarCuenta(id, { nombre, alias, color, moneda, activa }) {
   }
 }
 
+
 /**
- * Archivar una cuenta (soft delete)
+ * Alternar estado de cuenta (Activa/Inactiva)
  */
-async function archivarCuenta(id) {
+async function toggleCuentaActiva(id) {
   try {
+    // Obtener estado actual
+    const cuenta = await obtenerCuentaPorId(id);
+    if (!cuenta) throw new Error('Cuenta no encontrada');
+
+    const nuevoEstado = cuenta.activa ? 0 : 1;
+
     await pool.query(
-      'UPDATE cuentas SET activa = 0 WHERE id = ?',
-      [id]
+      'UPDATE cuentas SET activa = ? WHERE id = ?',
+      [nuevoEstado, id]
     );
-    console.log(`✅ Cuenta ID ${id} archivada exitosamente`);
+
+    console.log(`✅ Cuenta ID ${id} cambiada a estado ${nuevoEstado}`);
+    return nuevoEstado === 1;
   } catch (error) {
-    console.error('❌ Error al archivar cuenta:', error);
+    console.error('❌ Error al alternar estado de cuenta:', error);
     throw error;
   }
 }
@@ -400,9 +424,10 @@ module.exports = {
   obtenerCuentasUsuario,
   crearCuenta,
   obtenerTodasLasCuentasConSaldos,
+  obtenerTodasLasCuentasGestion,
   obtenerCuentaPorId,
   actualizarCuenta,
-  archivarCuenta,
+  toggleCuentaActiva,
   validarAliasUnico,
 
   // Transacciones

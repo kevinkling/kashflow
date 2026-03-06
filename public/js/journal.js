@@ -2,14 +2,25 @@
 let transactions = [];
 let filteredTransactions = [];
 let selectedAccount = null; // Cuenta seleccionada para filtrar
+let accountsData = []; // Lista completa de cuentas desde el backend
 
 // Cargar datos del servidor
 async function loadTransactions() {
     try {
-        const response = await fetch('/api/movimientos');
-        const data = await response.json();
+        // Cargar transacciones y saldos reales en paralelo
+        const [movimientosRes, cuentasRes] = await Promise.all([
+            fetch('/api/movimientos'),
+            fetch('/api/cuentas')
+        ]);
+        const data = await movimientosRes.json();
+        const cuentas = await cuentasRes.json();
+
+        // Guardar cuentas globalmente y calcular saldo total real
+        accountsData = cuentas;
+        window._totalBalanceReal = cuentas.reduce((sum, c) => sum + (parseFloat(c.saldo_actual) || 0), 0);
 
         console.log('Datos recibidos del servidor:', data); // Debug
+        console.log('Saldo total real (desde BD):', window._totalBalanceReal); // Debug
 
         // Convertir datos al formato del libro diario
         transactions = data.map((item, index) => {
@@ -93,10 +104,11 @@ function updateAccountFilterBadge() {
     let badge = document.getElementById('accountFilterBadge');
 
     if (selectedAccount) {
-        // Encontrar el nombre de la cuenta
-        const transaction = transactions.find(t => t.account === selectedAccount);
-        const accountName = transaction ? transaction.account_name : selectedAccount;
-        const accountColor = transaction ? transaction.account_color : '#6c757d';
+        // Buscar primero en accountsData (siempre tiene todas las cuentas aunque no tengan transacciones)
+        const cuenta = accountsData.find(c => c.cuenta_id == selectedAccount);
+        const transaction = !cuenta ? transactions.find(t => t.account == selectedAccount) : null;
+        const accountName = cuenta ? cuenta.cuenta : (transaction ? transaction.account_name : selectedAccount);
+        const accountColor = cuenta ? cuenta.color : (transaction ? transaction.account_color : '#6c757d');
 
         if (!badge) {
             // Crear el badge si no existe
@@ -194,8 +206,18 @@ function updateIndicators() {
         ? filteredTransactions
         : transactions;
 
-    // Calcular saldo total (transacciones filtradas o todas)
-    const totalBalance = transactionsToUse.reduce((sum, t) => sum + t.amount, 0);
+    // Si hay cuenta seleccionada → suma todas las transacciones históricas de esa cuenta
+    // Si no hay cuenta → usa el saldo real total de la BD
+    let totalBalance;
+    if (selectedAccount) {
+        totalBalance = transactions
+            .filter(t => t.account == selectedAccount)
+            .reduce((sum, t) => sum + t.amount, 0);
+    } else {
+        totalBalance = (window._totalBalanceReal !== undefined)
+            ? window._totalBalanceReal
+            : transactions.reduce((sum, t) => sum + t.amount, 0);
+    }
 
     // Obtener mes actual
     const now = new Date();

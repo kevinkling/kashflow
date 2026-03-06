@@ -382,7 +382,7 @@ async function consultarRegistrosHoy() {
 async function consultarTodasLasTransacciones() {
   try {
     const result = await pool.query(
-      `SELECT * FROM vista_transacciones_completas LIMIT 100`
+      `SELECT * FROM vista_transacciones_completas`
     );
 
     return result.rows;

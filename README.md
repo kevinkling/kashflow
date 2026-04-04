@@ -1,26 +1,26 @@
 # 💸 KashFlow
 
-**KashFlow** es una pequeña aplicación personal pensada para registrar ingresos, egresos y movimientos entre cuentas bancarias desde un bot de Telegram, que guarda los datos en una base de datos SQLite y ofrece un dashboard web para visualizar los movimientos.
+**KashFlow** es una aplicación personal para registrar movimientos financieros (ingresos, egresos y transferencias entre cuentas bancarias) mediante un bot de Telegram con lenguaje natural. Los datos se almacenan en SQLite y se visualizan en un dashboard web.
 
 ---
 
 ## 🧠 ¿Qué hace?
 
-Este proyecto permite enviar mensajes con estructuras predefinidas al bot de Telegram y registrar automáticamente los datos en una base de datos SQLite.  
-También incluye un dashboard web para visualizar y gestionar los movimientos financieros..
+Permite enviar mensajes en lenguaje natural al bot de Telegram para registrar automáticamente movimientos financieros en una base de datos SQLite. Incluye un dashboard web para visualizar y gestionar los movimientos.
 
 ---
 
 ## 📦 Estructura del Proyecto
 ```
 kashflow
-├─ .env.development / .env.production
+├─ .env / .env.example
 ├─ api
 │  ├─ bots
 │  │  ├─ commands.js        # Comandos específicos del bot
 │  │  └─ telegramBot.js     # Configuración del bot de Telegram
 │  ├─ index.js              # Punto de entrada de la API
 │  ├─ routes
+│  │  ├─ cuentas.js         # Rutas para gestión de cuentas
 │  │  ├─ telegram.js        # Rutas para el webhook de Telegram
 │  │  └─ web.js             # Rutas de la API REST
 │  └─ services
@@ -30,40 +30,37 @@ kashflow
 │     └─ utils.js           # Utilidades varias
 ├─ data
 │  └─ kashflow.db           # Base de datos SQLite
+├─ docker-compose.yml
+├─ Dockerfile
+├─ docs/
 ├─ package.json
 ├─ public
 │  ├─ css
 │  │  └─ journal.css        # Estilos del dashboard
-│  ├─ icons
-│  │  └─ favicon.ico
-│  ├─ img
-│  │  └─ kashflow_image.jpg
+│  ├─ icons/
+│  ├─ img/
 │  ├─ js
+│  │  ├─ accounts-crud.js   # CRUD de cuentas
+│  │  ├─ accounts.js        # Gestión de cuentas
 │  │  ├─ journal.js         # Lógica del dashboard
 │  │  ├─ utils.js           # Utilidades del frontend
-│  │  └─ particles
-│  │     ├─ particles.min.js
-│  │     └─ particlesjs-config.json
+│  │  └─ particles/
+│  │     └─ particles.min.js
 │  └─ index.html            # Dashboard web
-└─ README.md
+├─ README.md
+└─ temp/
 ```
 
 ---
 
-## 🧪 Tecnologías Usadas
+## 🧪 Tecnologías
 
-### 📦 API
-
-  - `Node.js` : entorno de ejecución
-  - `express` : framework para crear la API
-  - `SQLite` : base de datos
-  - `better-sqlite3` :  como biblioteca para interactuar con la base de datos SQLite
-
-### 🤖 BOT - Telegram
-  - [`node-telegram-bot-api`](https://github.com/yagop/node-telegram-bot-api)
-
-### 🎨 Frontend
-  - [`particles.js`](https://github.com/VincentGarreau/particles.js/) - Efectos visuales
+- **Backend:** Node.js + Express.js
+- **Base de datos:** SQLite (better-sqlite3)
+- **Bot:** Telegram Bot API (node-telegram-bot-api)
+- **Frontend:** HTML/CSS/JS vanilla con particles.js
+- **Gestor de paquetes:** pnpm
+- **Contenedor:** Docker
 
 ---
 
@@ -97,7 +94,7 @@ El bot interpreta los siguientes comandos en lenguaje natural:
 
 3. Configurá las variables de entorno:
    
-   Crea un archivo `.env.development` (o `.env.production`) en la raíz del proyecto:
+   Crea un archivo `.env` en la raíz del proyecto:
    ```env
    BOT_TOKEN=tu_token_de_telegram
    WEBHOOK_URL=https://tu-dominio.com
@@ -126,6 +123,63 @@ El bot interpreta los siguientes comandos en lenguaje natural:
    ```
 
 6. Accedé al dashboard web en `http://localhost:3000`
+
+---
+
+## 🚀 Deploy con Docker
+
+### Imagen
+
+La imagen está publicada en `ghcr.io/kevinkling/kashflow:latest`
+
+### Variables de Entorno
+
+Crea un archivo `.env` en la raíz del proyecto:
+
+```env
+BOT_TOKEN=tu_bot_token_aqui
+WEBHOOK_URL=https://tu-dominio.com
+WEBHOOK_PORT=8443
+API_PORT=3000
+NODE_ENV=production
+DATA_DIR=data
+DB_PATH=/app/data/kashflow.db
+UPDATES_DIR=/app/scripts/updates
+TZ=America/Argentina/Buenos_Aires
+```
+
+### Docker Compose
+
+```yaml
+services:
+  kashflow:
+    image: ghcr.io/kevinkling/kashflow:latest
+    container_name: kashflow
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - kashflow-data:/app/data
+    networks:
+      - hosting-network
+
+volumes:
+  kashflow-data:
+
+networks:
+  hosting-network:
+    name: hosting-network
+    external: true
+```
+
+### Notas de Deploy
+
+- Los datos persisten en el volumen Docker `kashflow-data`
+- Puerto expuesto: `3000`
+- Timezone configurada: `America/Argentina/Buenos_Aires`
+- Para backups, se puede usar `docker-volume-backup`
 
 ## 📌 Notas
 ⚠️ El proyecto está en desarrollo y enfocado en uso personal.

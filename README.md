@@ -184,3 +184,9 @@ networks:
 ## 📌 Notas
 ⚠️ El proyecto está en desarrollo y enfocado en uso personal.
 En el futuro, agregar soporte para múltiples cuentas (por ejemplo: mi cuenta, la de papá, etc.).
+
+## Constitución
+
+Las reglas no negociables de calidad, tests, UX y performance están en
+[`kashflow/.specify/memory/constitution.md`](kashflow/.specify/memory/constitution.md) (v1.0.0).
+Los planes Speckit MUST pasar el Constitution Check de esa constitución.

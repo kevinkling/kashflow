@@ -38,6 +38,23 @@ VALUES
 ON CONFLICT(alias) DO NOTHING;
 
 -- ============================================================================
+-- INSERTAR CATEGORÍAS DE EJEMPLO
+-- ============================================================================
+-- Categorías comunes para facilitar la captura rápida
+INSERT INTO categorias (nombre, icono, tipo) VALUES
+  ('Comida', '🍔', 'egreso'),
+  ('Transporte', '🚆', 'egreso'),
+  ('Vivienda', '🏠', 'egreso'),
+  ('Servicios', '💡', 'egreso'),
+  ('Suscripciones', '🎧', 'egreso'),
+  ('Salud', '💊', 'egreso'),
+  ('Educación', '🎓', 'egreso'),
+  ('Ahorro', '💰', 'ingreso'),
+  ('Regalo', '🎁', 'egreso'),
+  ('Otros', '🔖', 'egreso')
+ON CONFLICT(nombre) DO NOTHING;
+
+-- ============================================================================
 -- INSERTAR TRANSACCIONES DE EJEMPLO
 -- ============================================================================
 

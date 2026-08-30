@@ -258,6 +258,47 @@ header {
   background-color: transparent !important;
 }
 
+.obl-row--fijo td:first-child {
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+
+.obl-row--variable td:first-child {
+  box-shadow: inset 3px 0 0 var(--color-gold);
+}
+
+.obl-tipo {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid;
+}
+
+.obl-tipo--fijo {
+  color: #c4b5fd;
+  border-color: rgba(139, 92, 246, 0.45);
+  background: rgba(139, 92, 246, 0.14);
+}
+
+.obl-tipo--variable {
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.14);
+}
+
+#obligacionesTableBody .bi-toggle-on,
+#obligacionesTableBody .bi-toggle-off {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+#obligacionesTableBody button:disabled {
+  opacity: 1;
+}
+
 .table-striped > tbody > tr:nth-of-type(odd) > * {
   background-color: var(--bg-table-row) !important;
   color: var(--text-primary);
@@ -475,6 +516,227 @@ header {
   background-color: rgba(255, 255, 255, 0.05) !important;
 }
 
+/* Próximos compromisos (dashboard Inicio) */
+.card-body.dash-prox {
+  padding: 8px 18px 14px;
+}
+
+.dash-prox__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dash-prox__empty {
+  padding: 1rem 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.dash-prox__row {
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr) minmax(7rem, auto) 4.4rem;
+  grid-template-areas:
+    "date name amount status"
+    "date meta amount status";
+  column-gap: 10px;
+  row-gap: 2px;
+  align-items: center;
+  padding: 11px 2px;
+  min-height: 2.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.dash-prox__row:last-child {
+  border-bottom: none;
+}
+
+.dash-prox__date {
+  grid-area: date;
+  font-family: "DM Sans", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+.dash-prox__name {
+  grid-area: name;
+  min-width: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-prox__meta {
+  grid-area: meta;
+  min-width: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-prox__meta:empty {
+  display: none;
+}
+
+.dash-prox__amount {
+  grid-area: amount;
+  justify-self: stretch;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  text-align: right;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+.dash-prox__status {
+  grid-area: status;
+  justify-self: end;
+  min-height: 1.15rem;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.dash-prox__badge {
+  display: inline-block;
+  font-family: "DM Sans", sans-serif;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.16);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 6px;
+  padding: 0.15em 0.45em;
+  line-height: 1.25;
+}
+
+@media (max-width: 576px) {
+  .dash-prox__row {
+    grid-template-columns: 2.9rem minmax(0, 1fr) minmax(6.25rem, auto) 4.2rem;
+    column-gap: 8px;
+  }
+}
+
+.sim-months {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--border-color);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.sim-month {
+  background: var(--bg-card-solid);
+  padding: 1rem 1.1rem 1.05rem;
+  min-height: 6.25rem;
+}
+
+.sim-month__period {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.sim-month__saldo {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+  margin-top: 0.4rem;
+  line-height: 1.2;
+}
+
+.sim-month.is-neg .sim-month__saldo {
+  color: var(--color-negative);
+}
+
+.sim-month__delta {
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.sim-month__delta.is-down {
+  color: var(--color-negative);
+}
+
+.sim-month__delta.is-up {
+  color: var(--color-positive);
+}
+
+.sim-adjust {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  column-gap: 10px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sim-adjust:last-child {
+  border-bottom: none;
+}
+
+.sim-adjust__name {
+  min-width: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sim-adjust__meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.sim-adjust__amount {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.sim-adjust__amount.is-down {
+  color: var(--color-negative);
+}
+
+.sim-adjust__amount.is-up {
+  color: var(--color-positive);
+}
+
+.sim-empty {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  padding: 0.25rem 0 0.75rem;
+}
+
 /* Soporte responsive */
 @media (max-width: 768px) {
   .container-lg { padding: 0 15px; }
@@ -482,10 +744,15 @@ header {
   .btn { font-size: 0.9rem; padding: 0.5rem 1rem; }
   h1 { font-size: 1.5rem; }
   .card-body { padding: 1rem; }
+  .sim-months { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 576px) {
   .table th:nth-child(4),
   .table td:nth-child(4) { font-size: 0.85rem; }
   #totalBalance, #monthlyIncome, #monthlyExpenses { font-size: 1.5rem; }
+}
+
+@media (max-width: 576px) {
+  .kf-bar__label { display: none; }
 }

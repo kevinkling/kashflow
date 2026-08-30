@@ -418,6 +418,57 @@ function showAddTransactionModal() {
     }
 } */
 
+// Edición rápida y eliminación de transacciones
+function editTransaction(id) {
+    const transaction = transactions.find(t => t.id === id);
+    if (!transaction) return;
+    const newDesc = prompt('Editar descripción', transaction.description);
+    if (newDesc === null) return;
+    const newAmountStr = prompt('Editar monto (positivo)', String(Math.abs(transaction.amount)));
+    if (newAmountStr === null) return;
+    const newAmount = parseFloat(newAmountStr);
+    if (isNaN(newAmount)) {
+        showAlert('Monto inválido', 'warning');
+        return;
+    }
+    const payload = {
+        cuenta_id: transaction.account,
+        tipo: transaction.type || (transaction.amount >= 0 ? 'debe' : 'haber'),
+        monto: Math.abs(newAmount),
+        descripcion: newDesc
+    };
+    fetch(`/api/movimientos/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    }).then(res => {
+        if (!res.ok) throw new Error('Error al actualizar');
+        return res.json();
+    }).then(() => {
+        showAlert('Transacción actualizada', 'success');
+        loadTransactions();
+    }).catch(err => {
+        console.error(err);
+        showAlert('Error al actualizar transacción', 'danger');
+    });
+}
+
+async function deleteTransaction(id) {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta transacción?')) return;
+    try {
+        const response = await fetch(`/api/movimientos/${id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (!response.ok) throw new Error('Error al eliminar la transacción');
+        await loadTransactions();
+        showAlert('Transacción eliminada', 'success');
+    } catch (error) {
+        console.error('Error al eliminar transacción:', error);
+        showAlert('Error al eliminar la transacción', 'danger');
+    }
+}
+
 // Mostrar alerta
 function showAlert(message, type = 'info') {
     // Crear elemento de alerta
@@ -477,6 +528,75 @@ document.addEventListener('DOMContentLoaded', function () {
         initializeAccountsListeners();
     }
 
+    // Fill account select and categories for quick move
+    async function fillQuickMoveSelects() {
+        const catEl = document.getElementById('qmCategoria');
+        const cuentaEl = document.getElementById('qmCuenta');
+        const accounts = (window.KF && KF.store) ? KF.store.getAccounts() : accountsData;
+        if (cuentaEl) {
+            cuentaEl.innerHTML = accounts.map(c =>
+                `<option value="${c.cuenta_id || c.id}">${c.cuenta || c.nombre}</option>`
+            ).join('');
+        }
+        try {
+            const res = await fetch('/api/categorias');
+            const cats = res.ok ? await res.json() : [];
+            if (catEl) {
+                catEl.innerHTML = `<option value="">-- Categoría --</option>` + cats.map(cat => `<option value="${cat.id}">${cat.icono || ''} ${cat.nombre}</option>`).join('');
+            }
+            const lastAccount = localStorage.getItem('kf:lastAccount');
+            const lastCategory = localStorage.getItem('kf:lastCategory');
+            if (lastAccount && cuentaEl) cuentaEl.value = lastAccount;
+            if (lastCategory && catEl) catEl.value = lastCategory;
+        } catch (err) {
+            console.error('Error cargando categorías:', err);
+        }
+    }
+
+    if (window.KF && KF.store) {
+        KF.store.init().then(() => fillQuickMoveSelects());
+    } else {
+        fillQuickMoveSelects();
+    }
+
+    if (window.KF && KF.on) {
+        KF.on('kf:cuentas-changed', fillQuickMoveSelects);
+        KF.on('kf:view-changed', (e) => {
+            if (e.detail && e.detail.view === 'movimientos') {
+                loadTransactions();
+                fillQuickMoveSelects();
+            }
+        });
+    }
+
+    const quickMoveForm = document.getElementById('quickMoveForm');
+    if (quickMoveForm) {
+        quickMoveForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const categoriaId = document.getElementById('qmCategoria') ? document.getElementById('qmCategoria').value : null;
+            const cuentaId = Number(document.getElementById('qmCuenta').value);
+            try { localStorage.setItem('kf:lastAccount', String(cuentaId)); } catch (err) {}
+            try { if (categoriaId) localStorage.setItem('kf:lastCategory', String(categoriaId)); } catch (err) {}
+            const res = await fetch('/api/movimientos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    cuenta_id: cuentaId,
+                    tipo: document.getElementById('qmTipo') ? document.getElementById('qmTipo').value : 'haber',
+                    monto: Number(document.getElementById('qmMonto').value),
+                    descripcion: document.getElementById('qmDesc').value || 'Gasto',
+                    categoria_id: categoriaId || null
+                })
+            });
+            if (res.ok) {
+                e.target.reset();
+                await fillQuickMoveSelects();
+                await loadTransactions();
+                if (window.KF && KF.emit) KF.emit('kf:movimientos-changed');
+            } else alert('Error al registrar movimiento');
+        });
+    }
+
     // Modal y formularios
     /* const addTransactionBtn = document.querySelector('[data-bs-target="#addTransactionModal"]');
     if (addTransactionBtn) {
@@ -513,3 +633,16 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     } */
 });
+
+// Escuchar eventos desde el bus para recargar transacciones cuando sea necesario
+if (window.KF && KF.on) {
+    KF.on('kf:movimientos-changed', () => {
+        try { loadTransactions(); } catch (e) { console.error(e); }
+    });
+    KF.on('kf:cuentas-changed', () => {
+        try {
+            loadTransactions();
+            if (typeof fillQuickMoveSelects === 'function') fillQuickMoveSelects();
+        } catch (e) { console.error(e); }
+    });
+}

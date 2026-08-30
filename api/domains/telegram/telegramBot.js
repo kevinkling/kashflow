@@ -2,8 +2,6 @@ const TelegramBot = require('node-telegram-bot-api');
 const commands = require('./commands');
 
 const token = process.env.BOT_TOKEN;
-
-// Bot sin webhook propio - manejado por API
 const bot = new TelegramBot(token, { polling: false });
 
 console.log('Bot Telegram inicializado');

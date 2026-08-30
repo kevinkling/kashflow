@@ -240,11 +240,8 @@ async function saveAccount() {
 
         // Recargar cuentas
         await loadAllAccounts();
-
-        // Recargar transacciones para actualizar colores
-        if (typeof loadTransactions === 'function') {
-            loadTransactions();
-        }
+        if (window.KF && KF.store) await KF.store.refreshAccounts();
+        if (window.KF && KF.emit) KF.emit('kf:cuentas-changed');
     } catch (error) {
         console.error('Error al guardar cuenta:', error);
         showAlert(error.message, 'danger');
@@ -297,11 +294,8 @@ function toggleAccountStatus(accountId, alias, isActive) {
 
             // Recargar cuentas
             await loadAllAccounts();
-
-            // Recargar transacciones (por si afecta visualización)
-            if (typeof loadTransactions === 'function') {
-                loadTransactions();
-            }
+            if (window.KF && KF.store) await KF.store.refreshAccounts();
+            if (window.KF && KF.emit) KF.emit('kf:cuentas-changed');
         } catch (error) {
             console.error(`Error al ${action} cuenta:`, error);
             showAlert(error.message, 'danger');
@@ -315,18 +309,15 @@ function toggleAccountStatus(accountId, alias, isActive) {
  * Inicializar event listeners para CRUD de cuentas
  */
 function initializeAccountsCRUDListeners() {
-    // Botón "Gestionar Cuentas" en el header
-    const manageAccountsBtn = document.getElementById('manage-accounts-button');
-    if (manageAccountsBtn) {
-        manageAccountsBtn.addEventListener('click', () => {
-            loadAllAccounts();
-            loadAllUsers();
-            const modal = new bootstrap.Modal(document.getElementById('manageAccountsModal'));
-            modal.show();
+    if (window.KF && KF.on) {
+        KF.on('kf:view-changed', (e) => {
+            if (e.detail && e.detail.view === 'cuentas') {
+                loadAllAccounts();
+                loadAllUsers();
+            }
         });
     }
 
-    // Botón "Nueva Cuenta" en el modal de gestión
     const newAccountBtn = document.getElementById('newAccountBtn');
     if (newAccountBtn) {
         newAccountBtn.addEventListener('click', openCreateAccountModal);

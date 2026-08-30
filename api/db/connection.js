@@ -11,7 +11,6 @@ function initializeDataDirectory() {
     fs.mkdirSync(dataDir, { recursive: true });
   }
 
-  // Verificar permisos de escritura
   try {
     fs.accessSync(dataDir, fs.constants.W_OK);
     console.log(`✅ Directorio ${dataDir} es escribible`);
@@ -21,7 +20,6 @@ function initializeDataDirectory() {
   }
 }
 
-// Configuración de SQLite
 function configureSQLite(db) {
   db.pragma('journal_mode = DELETE');
   db.pragma('synchronous = FULL');
@@ -31,7 +29,7 @@ function configureSQLite(db) {
 
 initializeDataDirectory();
 
-const db = new Database(dbPath, { 
+const db = new Database(dbPath, {
   verbose: process.env.NODE_ENV === 'development' ? console.log : null,
   fileMustExist: false
 });
@@ -41,20 +39,11 @@ configureSQLite(db);
 console.log('✅ Conectado a SQLite:', dbPath);
 
 const pool = {
-  /**
-   * Ejecuta una query SQL
-   * @param {string} sql - Query SQL con placeholders $1, $2, etc.
-   * @param {Array} params - Parámetros para la query
-   * @returns {Promise<{rows: Array, rowCount: number}>}
-   */
   query: (sql, params = []) => {
     return new Promise((resolve, reject) => {
       try {
-        // Convertir placeholders de PostgreSQL ($1, $2) a SQLite (?)
         const sqliteSql = sql.replace(/\$(\d+)/g, '?');
         const stmt = db.prepare(sqliteSql);
-
-        // Detectar tipo de query
         const isSelect = sql.trim().toUpperCase().startsWith('SELECT');
 
         if (isSelect) {
@@ -62,10 +51,10 @@ const pool = {
           resolve({ rows, rowCount: rows.length });
         } else {
           const info = stmt.run(...params);
-          resolve({ 
-            rows: [], 
+          resolve({
+            rows: [],
             rowCount: info.changes,
-            lastInsertRowid: info.lastInsertRowid 
+            lastInsertRowid: info.lastInsertRowid
           });
         }
       } catch (error) {
@@ -93,7 +82,6 @@ const pool = {
   }
 };
 
-// Cerrar conexión al terminar el proceso
 process.on('exit', () => pool.close());
 process.on('SIGINT', () => {
   pool.close();

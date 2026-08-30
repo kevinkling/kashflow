@@ -31,10 +31,11 @@
           KashFlow
         </h1>
         <div class="kf-bar__tools">
-          <button type="button" id="movimientos-button" class="kf-bar__tab is-on" title="Registro del día a día"><i class="bi bi-journal-text"></i><span class="kf-bar__label">Movimientos</span></button>
-          <button type="button" id="planning-button" class="kf-bar__tab" title="Alquiler, préstamos y cuentas a pagar"><i class="bi bi-receipt"></i><span class="kf-bar__label">Obligaciones</span></button>
-          <button type="button" id="simulator-button" class="kf-bar__tab" title="Simulador"><i class="bi bi-calculator"></i><span class="kf-bar__label">Simulador</span></button>
-          <button type="button" id="manage-accounts-button" class="kf-bar__icon" title="Gestionar Cuentas"><i class="bi bi-bank"></i><span class="kf-bar__label">Cuentas</span></button>
+          <button type="button" id="inicio-button" class="kf-bar__tab is-on" title="Inicio - ¿Cómo estoy?"><i class="bi bi-speedometer2"></i><span class="kf-bar__label">Inicio</span></button>
+          <button type="button" id="movimientos-button" class="kf-bar__tab" title="Registro del día a día"><i class="bi bi-journal-text"></i><span class="kf-bar__label">Movimientos</span></button>
+          <button type="button" id="obligaciones-button" class="kf-bar__tab" title="Obligaciones"><i class="bi bi-receipt"></i><span class="kf-bar__label">Obligaciones</span></button>
+          <button type="button" id="simulador-button" class="kf-bar__tab" title="Simulador"><i class="bi bi-calculator"></i><span class="kf-bar__label">Simulador</span></button>
+          <button type="button" id="cuentas-button" class="kf-bar__tab" title="Cuentas y tarjetas"><i class="bi bi-bank"></i><span class="kf-bar__label">Cuentas</span></button>
           <button type="button" id="refresh-button" class="kf-bar__icon" title="Actualizar" aria-label="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
         </div>
       </div>
@@ -61,7 +62,78 @@
 
     <!-- Filtros y Resumen -->
     <div class="container-lg mt-4">
-      <div id="view-movimientos">
+      <div id="view-inicio" style="">
+        <div class="row mb-4">
+          <div class="col-md-12">
+            <div class="card bg-dark bg-opacity-75">
+              <div class="card-body">
+                <h4 class="text-white mb-1">Disponible real</h4>
+                <h2 id="dashboardDisponible" class="text-white fw-bold">$0.00</h2>
+                <p class="text-white-50 mt-2" id="dashboardSubtitle">Saldo real menos compromisos próximos</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row mb-4">
+          <div class="col-md-3">
+            <div class="card bg-secondary bg-opacity-75">
+              <div class="card-body text-center">
+                <div class="text-white-50">Ingresos</div>
+                <div id="dashboardIngresos" class="fw-bold text-white">$0.00</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card bg-secondary bg-opacity-75">
+              <div class="card-body text-center">
+                <div class="text-white-50">Gastado</div>
+                <div id="dashboardGastado" class="fw-bold text-white">$0.00</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card bg-secondary bg-opacity-75">
+              <div class="card-body text-center">
+                <div class="text-white-50">Comprometido</div>
+                <div id="dashboardComprometido" class="fw-bold text-white">$0.00</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card bg-secondary bg-opacity-75">
+              <div class="card-body text-center">
+                <div class="text-white-50">Disponible</div>
+                <div id="dashboardDisponibleResumen" class="fw-bold text-white">$0.00</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="card bg-dark bg-opacity-75">
+              <div class="card-header">
+                <h6 class="text-white mb-0">Próximos compromisos</h6>
+              </div>
+              <div class="card-body dash-prox">
+                <ul id="dashboardProximos" class="dash-prox__list"></ul>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card bg-dark bg-opacity-75">
+              <div class="card-header">
+                <h6 class="text-white mb-0">Gastos por categoría (este mes)</h6>
+              </div>
+              <div class="card-body p-2">
+                <ul id="dashboardCategorias" class="list-group list-group-flush"></ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="view-movimientos" style="display:none;">
       <div class="row mb-4">
         <div class="col-md-12">
           <div class="card bg-dark bg-opacity-75">
@@ -155,15 +227,10 @@
         <div class="card-body border-bottom border-secondary">
           <h6 class="text-white">Nuevo movimiento del día</h6>
           <form id="quickMoveForm" class="row g-2 align-items-end">
+            <div class="col-md-2"><input id="qmMonto" type="number" step="0.01" class="form-control" placeholder="Monto" required autofocus></div>
+            <div class="col-md-3"><select id="qmCategoria" class="form-select"><option value="">-- Categoría --</option></select></div>
             <div class="col-md-3"><select id="qmCuenta" class="form-select" required></select></div>
-            <div class="col-md-2">
-              <select id="qmTipo" class="form-select">
-                <option value="haber">Egreso</option>
-                <option value="debe">Ingreso</option>
-              </select>
-            </div>
-            <div class="col-md-2"><input id="qmMonto" type="number" step="0.01" class="form-control" placeholder="Monto" required></div>
-            <div class="col-md-3"><input id="qmDesc" class="form-control" placeholder="Descripción" required></div>
+            <div class="col-md-2"><input id="qmDesc" class="form-control" placeholder="Descripción (opcional)"></div>
             <div class="col-md-2"><button class="btn btn-primary w-100" type="submit">Registrar</button></div>
           </form>
         </div>
@@ -196,6 +263,11 @@
             <button class="btn btn-sm btn-outline-light me-2" id="generateInstancesBtn">Generar mes</button>
             <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#commitmentModal">+ Obligación</button>
           </div>
+        </div>
+        <div class="mb-3" id="comprometidoDetalle" style="display:flex;gap:1rem;align-items:center">
+          <!-- Detalle de cuánto compone el comprometido -->
+          <div class="text-white-50">Comprometido:</div>
+          <div id="comprometidoBreakdown" class="fw-bold text-white">$0.00</div>
         </div>
 
         <div class="row mb-4">
@@ -265,11 +337,22 @@
         </div>
 
         <div class="row g-3 mb-4">
-          <div class="col-lg-6">
-            <div class="card bg-dark bg-opacity-75 h-100">
-              <div class="card-header">
-                <h6 class="text-white mb-0"><i class="bi bi-pin-angle me-2"></i>Montos fijos</h6>
-                <small class="text-white-50">Alquiler, servicios, préstamos y cuotas conocidas</small>
+          <div class="col-12">
+            <div class="card bg-dark bg-opacity-75">
+              <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                  <h6 class="text-white mb-0"><i class="bi bi-calendar3 me-2"></i>Agenda del mes</h6>
+                  <small class="text-white-50">Fijos, variables y cuotas, ordenados por vencimiento</small>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <button type="button" class="btn btn-sm btn-outline-light" id="agendaPrevMonth" title="Mes anterior" aria-label="Mes anterior">
+                    <i class="bi bi-chevron-left"></i>
+                  </button>
+                  <span id="agendaMonthLabel" class="text-white fw-semibold text-center" style="min-width:9.5rem;">—</span>
+                  <button type="button" class="btn btn-sm btn-outline-light" id="agendaNextMonth" title="Mes siguiente" aria-label="Mes siguiente">
+                    <i class="bi bi-chevron-right"></i>
+                  </button>
+                </div>
               </div>
               <div class="card-body p-0">
                 <div class="table-responsive">
@@ -277,121 +360,168 @@
                     <thead>
                       <tr>
                         <th>Vence</th>
+                        <th>Tipo</th>
                         <th>Descripción</th>
                         <th>Esperado</th>
-                        <th>Estado</th>
-                        <th></th>
+                        <th class="text-center">Pagado</th>
                       </tr>
                     </thead>
-                    <tbody id="fijosTableBody"></tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="col-lg-6">
-            <div class="card bg-dark bg-opacity-75 h-100">
-              <div class="card-header">
-                <h6 class="text-white mb-0"><i class="bi bi-credit-card me-2"></i>Montos variables</h6>
-                <small class="text-white-50">Resúmenes de tarjeta y cargos que cambian cada mes</small>
-              </div>
-              <div class="card-body p-0">
-                <div class="table-responsive">
-                  <table class="table table-dark table-hover mb-0">
-                    <thead>
-                      <tr>
-                        <th>Vence</th>
-                        <th>Descripción</th>
-                        <th>Esperado</th>
-                        <th>Estado</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody id="variablesTableBody"></tbody>
+                    <tbody id="obligacionesTableBody"></tbody>
                   </table>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-        <div class="card bg-dark bg-opacity-75 mb-4">
-          <div class="card-body">
-          <div class="row g-3">
-            <div class="col-md-12">
-              <h6 class="text-white">Tarjeta y consumo</h6>
-              <form id="cardForm" class="mb-3">
-                <input id="cardNombre" class="form-control mb-2" placeholder="Nombre (Visa)" required>
-                <input id="cardAlias" class="form-control mb-2" placeholder="Alias" required>
-                <div class="row g-2 mb-2">
-                  <div class="col"><input id="cardCierre" type="number" min="1" max="31" class="form-control" placeholder="Día cierre" required></div>
-                  <div class="col"><input id="cardVence" type="number" min="1" max="31" class="form-control" placeholder="Día vencimiento" required></div>
-                </div>
-                <select id="cardCuenta" class="form-select mb-2"></select>
-                <button class="btn btn-outline-info" type="submit">Crear tarjeta</button>
-              </form>
-              <form id="consumoForm">
-                <select id="consumoTarjeta" class="form-select mb-2"></select>
-                <input id="consumoDesc" class="form-control mb-2" placeholder="Descripción del consumo">
-                <input id="consumoMonto" type="number" step="0.01" class="form-control mb-2" placeholder="Monto">
-                <input id="consumoCuotas" class="form-control mb-2" placeholder="Cuotas (1/12)" value="1/1">
-                <button class="btn btn-outline-warning" type="submit">Registrar consumo</button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
       </div>
       </div>
 
       <div id="view-simulador" style="display:none;">
       <div class="card bg-dark bg-opacity-75" id="simulatorCard">
-        <div class="card-header">
-          <h5 class="text-white mb-0">
-            <i class="bi bi-calculator me-2"></i>
-            Simulador de Pagos
-          </h5>
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div>
+            <h5 class="text-white mb-0">
+              <i class="bi bi-calculator me-2"></i>
+              Simulador de pagos
+            </h5>
+            <small class="text-white-50">Qué pasa con el saldo si cambiás un pago o sumás un gasto</small>
+          </div>
         </div>
         <div class="card-body">
-          <div class="row g-3 mb-3">
+          <div class="row g-3 mb-4">
             <div class="col-md-6">
-              <label class="form-label text-white">Escenarios guardados</label>
+              <label class="form-label text-white" for="scenarioSelect">Escenario</label>
               <select id="scenarioSelect" class="form-select"></select>
             </div>
-            <div class="col-md-6 d-flex align-items-end">
-              <input type="text" id="newScenarioName" class="form-control me-2" placeholder="Nombre del escenario">
-              <button id="createScenarioBtn" class="btn btn-primary">Crear</button>
+            <div class="col-md-6 d-flex align-items-end gap-2">
+              <input type="text" id="newScenarioName" class="form-control" placeholder="Nuevo escenario" autocomplete="off">
+              <button type="button" id="createScenarioBtn" class="btn btn-outline-light">Crear</button>
             </div>
           </div>
 
           <div id="scenarioControls" style="display:none;">
-            <h6 class="text-white">Ajustes del escenario</h6>
-            <div id="adjustmentsList" class="mb-3"></div>
+            <div class="row g-4">
+              <div class="col-lg-5">
+                <h6 class="text-white mb-1">Cambiar un pago</h6>
+                <p class="text-white-50 small mb-3">Elegí una obligación y cambiá el importe, o omitila en este escenario.</p>
+                <label class="form-label text-white" for="simInstancia">Obligación</label>
+                <select id="simInstancia" class="form-select mb-2"></select>
+                <div class="d-flex gap-2 mb-4">
+                  <input id="simInstanciaMonto" class="form-control" type="number" min="0" step="0.01" placeholder="Monto">
+                  <button type="button" id="simAplicarPago" class="btn btn-primary">Aplicar</button>
+                  <button type="button" id="simOmitirPago" class="btn btn-outline-light">Omitir</button>
+                </div>
 
-            <div class="mb-3">
-              <label class="form-label text-white">Agregar ajuste</label>
-              <div class="input-group">
-                <select id="adjustType" class="form-select" style="max-width:160px;">
-                  <option value="instancia">Instancia existente</option>
-                  <option value="libre">Línea libre</option>
-                </select>
-                <input id="adjustRef" class="form-control" placeholder="ID instancia o descripción">
-                <input id="adjustAmount" class="form-control" placeholder="Monto (positivo)"></input>
-                <select id="adjustSign" class="form-select" style="max-width:120px;">
-                  <option value="-1">Egreso</option>
-                  <option value="1">Ingreso</option>
-                </select>
-                <button id="addAdjustBtn" class="btn btn-success">Agregar</button>
+                <h6 class="text-white mb-1">Movimiento hipotético</h6>
+                <p class="text-white-50 small mb-3">Un gasto o ingreso extra que no está en la agenda.</p>
+                <input id="simLibreDesc" class="form-control mb-2" placeholder="Ej. extra carnicería" autocomplete="off">
+                <div class="d-flex flex-wrap gap-2 mb-4">
+                  <input id="simLibreMonto" class="form-control" type="number" min="0" step="0.01" placeholder="Monto" style="min-width:7rem;flex:1;">
+                  <select id="simLibreSign" class="form-select" style="max-width:8.5rem;">
+                    <option value="-1">Egreso</option>
+                    <option value="1">Ingreso</option>
+                  </select>
+                  <select id="simLibreMes" class="form-select" style="max-width:11rem;"></select>
+                  <button type="button" id="simAddLibre" class="btn btn-success">Agregar</button>
+                </div>
+
+                <h6 class="text-white mb-2">Ajustes de este escenario</h6>
+                <div id="adjustmentsList"></div>
               </div>
-            </div>
-
-            <div class="mb-3">
-              <button id="computeSimBtn" class="btn btn-outline-light">Calcular saldo simulado (mes)</button>
-              <div class="mt-3 text-white" id="simResult"></div>
+              <div class="col-lg-7">
+                <h6 class="text-white mb-1">Proyección a 6 meses</h6>
+                <p class="text-white-50 small mb-3">Saldo real menos lo que vence, con tus ajustes. En rojo si queda en contra.</p>
+                <div id="simResult"></div>
+              </div>
             </div>
           </div>
         </div>
       </div>
+      </div>
+
+      <div id="view-cuentas" style="display:none;">
+        <div class="card bg-dark bg-opacity-75">
+          <div class="card-header">
+            <h5 class="text-white mb-0"><i class="bi bi-bank me-2"></i>Cuentas</h5>
+          </div>
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h6 class="text-white mb-0">Cuentas Registradas</h6>
+              <button class="btn btn-success" id="newAccountBtn">
+                <i class="bi bi-plus-lg me-2"></i>Nueva Cuenta
+              </button>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-dark table-hover mb-0">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Alias</th>
+                    <th>Color</th>
+                    <th>Moneda</th>
+                    <th>Usuario</th>
+                    <th class="text-end">Saldo</th>
+                    <th class="text-center">Estado</th>
+                    <th class="text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="accountsManagementTableBody">
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card bg-dark bg-opacity-75 mt-4">
+          <div class="card-header">
+            <h5 class="text-white mb-0"><i class="bi bi-credit-card me-2"></i>Tarjetas</h5>
+            <small class="text-white-50">Alta, consumos y resumen del período</small>
+          </div>
+          <div class="card-body">
+            <h6 class="text-white mb-3">Tarjetas registradas</h6>
+            <div class="table-responsive mb-4">
+              <table class="table table-dark table-hover mb-0">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Alias</th>
+                    <th>Día cierre</th>
+                    <th>Día vencimiento</th>
+                    <th>Cuenta de pago</th>
+                  </tr>
+                </thead>
+                <tbody id="tarjetasMaestroBody">
+                </tbody>
+              </table>
+            </div>
+            <h6 class="text-white mb-3">Nueva tarjeta</h6>
+            <form id="cardForm">
+              <input id="cardNombre" class="form-control mb-2" placeholder="Nombre (Visa)" required>
+              <input id="cardAlias" class="form-control mb-2" placeholder="Alias" required>
+              <div class="row g-2 mb-2">
+                <div class="col"><input id="cardCierre" type="number" min="1" max="31" class="form-control" placeholder="Día cierre" required></div>
+                <div class="col"><input id="cardVence" type="number" min="1" max="31" class="form-control" placeholder="Día vencimiento" required></div>
+              </div>
+              <select id="cardCuenta" class="form-select mb-2"></select>
+              <button class="btn btn-success" type="submit">
+                <i class="bi bi-plus-lg me-2"></i>Crear tarjeta
+              </button>
+            </form>
+            <hr class="border-secondary my-4">
+            <h6 class="text-white mb-2">Consumos y resumen</h6>
+            <small class="text-white-50 d-block mb-3">Elegí una tarjeta para ver el período y registrar un consumo.</small>
+            <div id="tarjetasList" class="mb-3"></div>
+            <div id="tarjetaDetalle" class="mb-3"></div>
+            <h6 class="text-white">Registrar consumo</h6>
+            <form id="consumoForm">
+              <select id="consumoTarjeta" class="form-select mb-2"></select>
+              <input id="consumoDesc" class="form-control mb-2" placeholder="Descripción del consumo">
+              <input id="consumoMonto" type="number" step="0.01" class="form-control mb-2" placeholder="Monto">
+              <input id="consumoCuotas" class="form-control mb-2" placeholder="Cuotas (1/12)" value="1/1">
+              <button class="btn btn-outline-warning" type="submit">Registrar consumo</button>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -416,50 +546,6 @@
                 </thead>
                 <tbody id="allAccountsTableBody">
                   <!-- Se llenará dinámicamente (máximo 5 visibles con scroll) -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div class="modal-footer border-secondary">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal para Gestionar Cuentas -->
-    <div class="modal fade" id="manageAccountsModal" tabindex="-1" aria-labelledby="manageAccountsModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-xl">
-        <div class="modal-content bg-dark">
-          <div class="modal-header border-secondary">
-            <h5 class="modal-title text-white" id="manageAccountsModalLabel">
-              <i class="bi bi-bank me-2"></i>Gestión de Cuentas
-            </h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h6 class="text-white mb-0">Cuentas Registradas</h6>
-              <button class="btn btn-success" id="newAccountBtn">
-                <i class="bi bi-plus-lg me-2"></i>Nueva Cuenta
-              </button>
-            </div>
-            <div class="table-responsive">
-              <table class="table table-dark table-hover mb-0">
-                <thead>
-                  <tr>
-                    <th>Nombre</th>
-                    <th>Alias</th>
-                    <th>Color</th>
-                    <th>Moneda</th>
-                    <th>Usuario</th>
-                    <th class="text-end">Saldo</th>
-                    <th class="text-center">Estado</th>
-                    <th class="text-center">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody id="accountsManagementTableBody">
-                  <!-- Se llenará dinámicamente -->
                 </tbody>
               </table>
             </div>
@@ -613,12 +699,29 @@
                 <option value="egreso">Egreso</option>
                 <option value="ingreso">Ingreso</option>
               </select>
+              <!-- Nuevo selector: Gasto Fijo / Compra en cuotas / Compra única -->
+              <select id="cmKind" class="form-select mb-2">
+                <option value="gasto_fijo">Gasto Fijo</option>
+                <option value="compra_cuotas">Compra en cuotas</option>
+                <option value="compra_unica">Compra única</option>
+              </select>
+
+              <!-- Campos para Gasto Fijo -->
               <select id="cmFreq" class="form-select mb-2">
                 <option value="mensual">Mensual</option>
                 <option value="unica">Única</option>
               </select>
               <input id="cmDia" type="number" min="1" max="31" class="form-control mb-2" placeholder="Día de vencimiento">
-              <input id="cmMonto" type="number" step="0.01" class="form-control mb-2" placeholder="Importe estimado" required>
+
+              <!-- Campos para Compras -->
+              <input id="cmMonto" type="number" step="0.01" class="form-control mb-2" placeholder="Importe total" required>
+              <div id="cmCuotasWrap" style="display:none;">
+                <input id="cmCuotas" type="number" min="1" class="form-control mb-2" placeholder="Cantidad de cuotas (ej. 12)">
+                <div class="text-white-50 mb-2">Importe por cuota: <span id="cmImportePorCuota">$0.00</span></div>
+                <select id="cmTarjeta" class="form-select mb-2"><option value="">Seleccionar tarjeta (opcional)</option></select>
+              </div>
+
+              <!-- Cuenta de pago para gastos fijos/confirmaciones -->
               <select id="cmCuenta" class="form-select mb-2"></select>
             </form>
           </div>
@@ -673,10 +776,15 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/particles/particles.min.js"></script>
     <script src="js/utils.js"></script>
+    <script src="js/core/bus.js"></script>
+    <script src="js/core/store.js"></script>
+    <script src="js/core/nav.js"></script>
     <script src="js/accounts.js"></script>
     <script src="js/accounts-crud.js"></script>
+    <script src="js/dashboard.js"></script>
     <script src="js/journal.js"></script>
-    <script src="js/planning.js"></script>
+    <script src="js/obligaciones.js"></script>
+    <script src="js/tarjetas.js"></script>
     <script src="js/simulator.js"></script>
     <script>
       // Register service worker and manifest

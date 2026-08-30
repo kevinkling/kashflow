@@ -2,8 +2,11 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const {
   fechaVencimientoMensual,
-  calcularProyeccionSimulada
-} = require('../api/services/planningLogic');
+  calcularProyeccionSimulada,
+  rangoMesLocal,
+  filtrarAjustesPorPeriodo,
+  fechaLocalISO
+} = require('../api/shared/financeCalculations');
 
 test('fecha de vencimiento se ajusta al último día del mes', () => {
   assert.equal(fechaVencimientoMensual(2026, 2, 31), '2026-02-28');
@@ -51,4 +54,26 @@ test('instancias pagadas no impactan la proyección', () => {
     ajustes: []
   });
   assert.equal(r.saldoSimulado, 200);
+});
+
+test('rango de mes se arma en calendario local, no en UTC', () => {
+  assert.deepEqual(rangoMesLocal(2026, 8), { desde: '2026-08-01', hasta: '2026-08-31' });
+  assert.deepEqual(rangoMesLocal(2026, 2), { desde: '2026-02-01', hasta: '2026-02-28' });
+});
+
+test('fecha local no se corre un día por UTC', () => {
+  const d = new Date(2026, 7, 1);
+  assert.equal(fechaLocalISO(d), '2026-08-01');
+});
+
+test('línea libre con fecha solo entra en ese período', () => {
+  const ajustes = [
+    { tipo: 'libre', monto_simulado: 100000, signo: -1, fecha_estimada: '2026-09-10' },
+    { tipo: 'instancia', instancia_compromiso_id: 1, monto_simulado: 10, signo: -1 }
+  ];
+  const sep = filtrarAjustesPorPeriodo(ajustes, '2026-09', { incluirSinFecha: false });
+  const ago = filtrarAjustesPorPeriodo(ajustes, '2026-08', { incluirSinFecha: false });
+  assert.equal(sep.filter((a) => a.tipo === 'libre').length, 1);
+  assert.equal(ago.filter((a) => a.tipo === 'libre').length, 0);
+  assert.equal(ago.filter((a) => a.tipo === 'instancia').length, 1);
 });

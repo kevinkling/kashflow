@@ -32,12 +32,8 @@ const app = express();
 
 // Importar servicios y rutas
 const db = require('./services/db.js');
-const telegramRoutes = require('./routes/telegram.js');
 const webRoutes = require('./routes/web.js');
 const cuentasRoutes = require('./routes/cuentas.js');
-
-// Importar bot para configurar webhook
-const { bot: telegramBot } = require('./bots/telegramBot.js');
 
 
 
@@ -51,28 +47,30 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
 
 // Rutas de la API - DESPUÉS del middleware - Las rutas más específicas deben ir PRIMERO
-app.use('/kashflow/telegram', telegramRoutes);
+// Montar rutas principales
 app.use('/api/cuentas', cuentasRoutes);
 app.use('/api', webRoutes);
+// Rutas de planificación (compromisos, instancias, confirmaciones)
+const planningRoutes = require('./routes/planning.js');
+app.use('/api/planning', planningRoutes);
 
-// Configurar webhook de Telegram al iniciar
-const webhookUrl = process.env.WEBHOOK_URL;
-console.log('WEBHOOK_URL:', webhookUrl);
-if (webhookUrl) {
+const enableTelegram = (process.env.ENABLE_TELEGRAM_BOT || 'false').toLowerCase() === 'true';
+if (enableTelegram) {
+  const telegramRoutes = require('./routes/telegram.js');
+  const { bot: telegramBot } = require('./bots/telegramBot.js');
+  app.use('/kashflow/telegram', telegramRoutes);
+
+  const webhookUrl = process.env.WEBHOOK_URL;
+  if (webhookUrl) {
     const fullWebhookUrl = `${webhookUrl}/telegram/webhook`;
-    console.log(fullWebhookUrl)
-
     telegramBot.setWebHook(fullWebhookUrl)
-        .then(() => {
-            console.log('✅ Webhook de Telegram configurado:', fullWebhookUrl);
-        })
-        .catch(err => {
-            console.error('❌ Error configurando webhook:', err.message);
-            console.log(fullWebhookUrl)
-
-        });
+      .then(() => console.log('Webhook de Telegram configurado:', fullWebhookUrl))
+      .catch(err => console.error('Error configurando webhook:', err.message));
+  } else {
+    console.warn('ENABLE_TELEGRAM_BOT=true pero WEBHOOK_URL no está configurado');
+  }
 } else {
-    console.warn('⚠️  WEBHOOK_URL no configurado - Bot no funcionará');
+  console.log('Bot de Telegram desconectado (ENABLE_TELEGRAM_BOT=false)');
 }
 
 app.listen(PORT, () => {

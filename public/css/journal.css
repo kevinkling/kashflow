@@ -99,6 +99,77 @@ header {
   -webkit-backdrop-filter: blur(12px);
 }
 
+.kf-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+}
+
+.kf-bar__mark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.kf-bar__mark img {
+  height: 24px;
+  width: auto;
+}
+
+.kf-bar__tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.kf-bar__tab,
+.kf-bar__icon {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--text-secondary);
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 0.8rem;
+  letter-spacing: -0.006em;
+  min-height: 40px;
+  min-width: 40px;
+  padding: 0 0.55rem;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kf-bar__tab.is-on {
+  color: var(--text-primary);
+  background: rgba(139, 92, 246, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.35);
+}
+
+.kf-bar__tab:hover:not(.is-on),
+.kf-bar__icon:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.kf-bar__tab:focus-visible,
+.kf-bar__icon:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
 /* Cards con Glassmorphism */
 .card {
   background-color: var(--bg-card) !important;

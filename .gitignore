@@ -17,6 +17,9 @@ dist/
 build/
 todo.md
 
+# Datos personales de importación
+kashflow-data/
+
 # Base de datos
 data/*.db
 *.db

@@ -37,4 +37,31 @@ router.get('/movimientos', async (req, res) => {
     }
 });
 
+router.post('/movimientos', async (req, res) => {
+    try {
+        const { registrarTransaccion } = require('../services/dbHelper.js');
+        const { cuenta_id, tipo, monto, descripcion } = req.body;
+        if (!cuenta_id || !tipo || !monto || !descripcion) {
+            return res.status(400).json({ error: 'cuenta_id, tipo, monto y descripcion son requeridos' });
+        }
+        const id = await registrarTransaccion(cuenta_id, tipo, monto, descripcion);
+        res.status(201).json({ id });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Error al registrar el movimiento' });
+    }
+});
+
+router.post('/transferencias', async (req, res) => {
+    try {
+        const { registrarTransferencia } = require('../services/dbHelper.js');
+        const { cuenta_origen_id, cuenta_destino_id, monto, descripcion } = req.body;
+        await registrarTransferencia(cuenta_origen_id, cuenta_destino_id, monto, descripcion || 'Transferencia');
+        res.status(201).json({ ok: true });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Error al registrar la transferencia' });
+    }
+});
+
 module.exports = router;

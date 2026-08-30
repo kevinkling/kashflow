@@ -1,5 +1,6 @@
 const pool = require('./db');
 const { getFormattedDate } = require('./utils');
+const { fechaVencimientoMensual, periodoYYYYMM, calcularProyeccionSimulada } = require('./planningLogic');
 
 // ============================================================================
 // FUNCIONES DE USUARIOS
@@ -248,7 +249,7 @@ async function registrarTransaccion(cuentaId, tipo, monto, descripcion, notas = 
     const montoAbs = Math.abs(monto);
     const signo = tipo === 'debe' ? 1 : -1;
 
-    await pool.query(
+    const insert = await pool.query(
       `INSERT INTO transacciones 
         (cuenta_id, tipo, signo, monto, descripcion, notas, telegram_message_id)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -256,6 +257,7 @@ async function registrarTransaccion(cuentaId, tipo, monto, descripcion, notas = 
     );
 
     console.log(`✅ Transacción registrada: ${tipo} de $${montoAbs}`);
+    return insert.lastInsertRowid;
   } catch (error) {
     console.error('❌ Error al registrar transacción:', error);
     throw error;
@@ -414,7 +416,297 @@ async function calcularSaldoCuenta(cuentaId) {
 // ============================================================================
 // EXPORTS
 // ============================================================================
+// ============================================================================
+// FUNCIONES DE PLANIFICACIÓN (compromisos e instancias)
+// ============================================================================
 
+/**
+ * Crear un compromiso (recurrente o único)
+ */
+async function crearCompromiso(usuarioId, nombre, tipo, frecuencia, diaVencimiento, importeEstimado, cuentaSugeridaId) {
+  try {
+    const insert = await pool.query(
+      `INSERT INTO compromisos
+        (usuario_id, nombre, tipo, frecuencia, dia_vencimiento, importe_estimado, cuenta_sugerida_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [usuarioId, nombre, tipo, frecuencia, diaVencimiento, importeEstimado, cuentaSugeridaId]
+    );
+    return insert.lastInsertRowid;
+  } catch (error) {
+    console.error('❌ Error al crear compromiso:', error);
+    throw error;
+  }
+}
+
+async function obtenerCompromisosUsuario(usuarioId) {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM compromisos WHERE usuario_id = ? ORDER BY nombre`,
+      [usuarioId]
+    );
+    return result.rows;
+  } catch (error) {
+    console.error('❌ Error al obtener compromisos:', error);
+    throw error;
+  }
+}
+
+async function crearInstanciaCompromiso(compromisoId, usuarioId, descripcion, periodo, fechaVencimiento, importeEsperado, cuentaPagoId) {
+  try {
+    const insert = await pool.query(
+      `INSERT INTO instancias_compromiso
+        (compromiso_id, usuario_id, descripcion, periodo, fecha_vencimiento, importe_esperado, cuenta_pago_id, estado)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente')`,
+      [compromisoId, usuarioId, descripcion, periodo, fechaVencimiento, importeEsperado, cuentaPagoId]
+    );
+    return insert.lastInsertRowid;
+  } catch (error) {
+    console.error('❌ Error al crear instancia de compromiso:', error);
+    throw error;
+  }
+}
+
+async function obtenerInstanciasPorPeriodo(desde, hasta) {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM instancias_compromiso WHERE DATE(fecha_vencimiento) BETWEEN DATE(?) AND DATE(?) ORDER BY fecha_vencimiento`,
+      [desde, hasta]
+    );
+    return result.rows;
+  } catch (error) {
+    console.error('❌ Error al obtener instancias por periodo:', error);
+    throw error;
+  }
+}
+
+async function confirmarInstancia(instanciaId, cuentaPagoId, montoFinal, descripcion) {
+  try {
+    const transaccionId = pool.withTransaction(() => {
+      const inst = pool.raw.prepare(
+        `SELECT ic.*, c.tipo AS compromiso_tipo
+         FROM instancias_compromiso ic
+         LEFT JOIN compromisos c ON ic.compromiso_id = c.id
+         WHERE ic.id = ?`
+      ).get(instanciaId);
+      if (!inst) throw new Error('Instancia no encontrada');
+      if (inst.estado === 'pagado') throw new Error('La instancia ya está pagada');
+      const transTipo = inst.compromiso_tipo === 'ingreso' ? 'debe' : 'haber';
+      const info = pool.raw.prepare(
+        `INSERT INTO transacciones (cuenta_id, tipo, signo, monto, descripcion)
+         VALUES (?, ?, ?, ?, ?)`
+      ).run(cuentaPagoId, transTipo, transTipo === 'debe' ? 1 : -1, Math.abs(montoFinal), descripcion);
+      pool.raw.prepare(
+        `UPDATE instancias_compromiso SET transaccion_id = ?, importe_final = ?, estado = 'pagado', fecha_modificacion = datetime('now', 'localtime') WHERE id = ?`
+      ).run(info.lastInsertRowid, montoFinal, instanciaId);
+      return info.lastInsertRowid;
+    });
+    return transaccionId;
+  } catch (error) {
+    console.error('❌ Error al confirmar instancia:', error);
+    throw error;
+  }
+}
+
+async function generarInstanciasDelPeriodo(usuarioId, year, month) {
+  const periodo = periodoYYYYMM(year, month);
+  const compromisos = await obtenerCompromisosUsuario(usuarioId);
+  const creadas = [];
+  for (const c of compromisos) {
+    if (!c.activa) continue;
+    if (c.frecuencia !== 'mensual') continue;
+    const fecha = fechaVencimientoMensual(year, month, c.dia_vencimiento);
+    const existing = await pool.query(
+      `SELECT id FROM instancias_compromiso WHERE compromiso_id = ? AND periodo = ?`,
+      [c.id, periodo]
+    );
+    if (existing.rows.length) continue;
+    const id = await crearInstanciaCompromiso(
+      c.id,
+      usuarioId,
+      c.nombre,
+      periodo,
+      fecha,
+      c.importe_estimado,
+      c.cuenta_sugerida_id
+    );
+    creadas.push(id);
+  }
+  return creadas;
+}
+
+async function obtenerAgenda(desde, hasta) {
+  const result = await pool.query(
+    `SELECT ic.*, c.nombre AS compromiso_nombre, c.tipo AS compromiso_tipo, c.frecuencia
+     FROM instancias_compromiso ic
+     LEFT JOIN compromisos c ON ic.compromiso_id = c.id
+     WHERE DATE(ic.fecha_vencimiento) BETWEEN DATE(?) AND DATE(?)
+     ORDER BY ic.fecha_vencimiento`,
+    [desde, hasta]
+  );
+  return result.rows;
+}
+
+async function crearTarjeta(usuarioId, nombre, alias, diaCierre, diaVencimiento, cuentaPagoId) {
+  const insert = await pool.query(
+    `INSERT INTO tarjetas (usuario_id, nombre, alias, dia_cierre, dia_vencimiento, cuenta_pago_id)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [usuarioId, nombre, alias, diaCierre, diaVencimiento, cuentaPagoId]
+  );
+  return insert.lastInsertRowid;
+}
+
+async function obtenerTarjetasUsuario(usuarioId) {
+  const result = await pool.query(
+    `SELECT * FROM tarjetas WHERE usuario_id = ? ORDER BY nombre`,
+    [usuarioId]
+  );
+  return result.rows;
+}
+
+async function registrarConsumoTarjeta(tarjetaId, descripcion, monto, fechaCompra, cuotas) {
+  const insert = await pool.query(
+    `INSERT INTO consumos_tarjeta (tarjeta_id, descripcion, monto, fecha_compra, cuotas)
+     VALUES (?, ?, ?, ?, ?)`,
+    [tarjetaId, descripcion, monto, fechaCompra, cuotas]
+  );
+  return insert.lastInsertRowid;
+}
+
+async function obtenerConsumosTarjeta(tarjetaId) {
+  const result = await pool.query(
+    `SELECT * FROM consumos_tarjeta WHERE tarjeta_id = ? ORDER BY fecha_compra DESC`,
+    [tarjetaId]
+  );
+  return result.rows;
+}
+
+async function generarResumenTarjeta(tarjetaId, usuarioId, year, month) {
+  const tarjetaRes = await pool.query('SELECT * FROM tarjetas WHERE id = ?', [tarjetaId]);
+  const tarjeta = tarjetaRes.rows[0];
+  if (!tarjeta) throw new Error('Tarjeta no encontrada');
+  const periodo = periodoYYYYMM(year, month);
+  const fecha = fechaVencimientoMensual(year, month, tarjeta.dia_vencimiento);
+  const cierre = Number(tarjeta.dia_cierre);
+  const start = new Date(year, month - 2, cierre + 1);
+  const end = new Date(year, month - 1, cierre);
+  const desde = start.toISOString().slice(0, 10);
+  const hasta = end.toISOString().slice(0, 10);
+  const consumos = await pool.query(
+    `SELECT COALESCE(SUM(monto), 0) AS total FROM consumos_tarjeta
+     WHERE tarjeta_id = ? AND DATE(fecha_compra) BETWEEN DATE(?) AND DATE(?) AND instancia_resumen_id IS NULL`,
+    [tarjetaId, desde, hasta]
+  );
+  const total = Number(consumos.rows[0].total || 0);
+  const instanciaId = await crearInstanciaCompromiso(
+    null,
+    usuarioId,
+    `Resumen ${tarjeta.nombre} ${periodo}`,
+    periodo,
+    fecha,
+    total || 0,
+    tarjeta.cuenta_pago_id
+  );
+  await pool.query(
+    `UPDATE consumos_tarjeta SET instancia_resumen_id = ?
+     WHERE tarjeta_id = ? AND DATE(fecha_compra) BETWEEN DATE(?) AND DATE(?) AND instancia_resumen_id IS NULL`,
+    [instanciaId, tarjetaId, desde, hasta]
+  );
+  return { instanciaId, total, desde, hasta };
+}
+
+// ============================================================================
+// FUNCIONES DE SIMULACION (escenarios)
+// ============================================================================
+
+async function crearEscenario(usuarioId, nombre) {
+  try {
+    const insert = await pool.query(
+      `INSERT INTO escenarios_simulacion (usuario_id, nombre) VALUES (?, ?)`,
+      [usuarioId, nombre]
+    );
+    return insert.lastInsertRowid;
+  } catch (error) {
+    console.error('❌ Error al crear escenario:', error);
+    throw error;
+  }
+}
+
+async function obtenerEscenariosUsuario(usuarioId) {
+  try {
+    const res = await pool.query(
+      `SELECT * FROM escenarios_simulacion WHERE usuario_id = ? ORDER BY fecha_creacion DESC`,
+      [usuarioId]
+    );
+    return res.rows;
+  } catch (error) {
+    console.error('❌ Error al obtener escenarios:', error);
+    throw error;
+  }
+}
+
+async function agregarAjusteEscenario(escenarioId, tipo, instanciaCompromisoId, descripcion, fechaEstimada, montoSimulado, signo) {
+  try {
+    const idRes = await pool.query(
+      `INSERT INTO escenario_ajustes (escenario_id, tipo, instancia_compromiso_id, descripcion, fecha_estimada, monto_simulado, signo)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [escenarioId, tipo, instanciaCompromisoId || null, descripcion || null, fechaEstimada || null, montoSimulado, signo]
+    );
+    return idRes.lastInsertRowid;
+  } catch (error) {
+    console.error('❌ Error al agregar ajuste al escenario:', error);
+    throw error;
+  }
+}
+
+async function obtenerAjustesEscenario(escenarioId) {
+  try {
+    const res = await pool.query(
+      `SELECT * FROM escenario_ajustes WHERE escenario_id = ? ORDER BY id`,
+      [escenarioId]
+    );
+    return res.rows;
+  } catch (error) {
+    console.error('❌ Error al obtener ajustes del escenario:', error);
+    throw error;
+  }
+}
+
+/**
+ * Calcular el saldo proyectado simulado para un escenario en un rango de fechas.
+ * Estrategia:
+ *  - Obtener saldo real total (vista_saldos_cuentas)
+ *  - Obtener instancias en rango y sumar ingresos/egresos esperados (según compromiso.tipo)
+ *  - Aplicar ajustes del escenario: reemplazar importe de instancias ajustadas, sumar líneas libres
+ */
+async function calcularSaldoSimulado(escenarioId, desde, hasta) {
+  try {
+    const saldos = await pool.query('SELECT COALESCE(SUM(saldo_actual),0) as total FROM vista_saldos_cuentas');
+    const saldoReal = Number(saldos.rows[0].total || 0);
+
+    const instRes = await pool.query(
+      `SELECT ic.id, ic.importe_esperado, ic.estado, c.tipo as compromiso_tipo
+       FROM instancias_compromiso ic
+       LEFT JOIN compromisos c ON ic.compromiso_id = c.id
+       WHERE DATE(ic.fecha_vencimiento) BETWEEN DATE(?) AND DATE(?)`,
+      [desde, hasta]
+    );
+    const ajustesRes = await pool.query(
+      `SELECT * FROM escenario_ajustes WHERE escenario_id = ?`,
+      [escenarioId]
+    );
+
+    return calcularProyeccionSimulada({
+      saldoReal,
+      instancias: instRes.rows,
+      ajustes: ajustesRes.rows
+    });
+  } catch (error) {
+    console.error('❌ Error al calcular saldo simulado:', error);
+    throw error;
+  }
+}
+
+// ============================================================================
 module.exports = {
   // Usuarios
   obtenerOCrearUsuario,
@@ -440,6 +732,26 @@ module.exports = {
   consultarRegistrosHoy,
   consultarTodasLasTransacciones,
   calcularSaldoCuenta,
+ 
+  // Planificación
+  crearCompromiso,
+  obtenerCompromisosUsuario,
+  crearInstanciaCompromiso,
+  obtenerInstanciasPorPeriodo,
+  confirmarInstancia,
+  generarInstanciasDelPeriodo,
+  obtenerAgenda,
+  crearTarjeta,
+  obtenerTarjetasUsuario,
+  registrarConsumoTarjeta,
+  obtenerConsumosTarjeta,
+  generarResumenTarjeta,
+  // Simulacion
+  crearEscenario,
+  obtenerEscenariosUsuario,
+  agregarAjusteEscenario,
+  obtenerAjustesEscenario,
+  calcularSaldoSimulado,
 
   // Compatibilidad con código anterior (deprecado)
   registrarMovimiento: registrarTransaccion,

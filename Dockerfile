@@ -80,9 +80,5 @@ EXPOSE 3000
 ENV NODE_ENV=production \
     API_PORT=3000
 
-# Healthcheck
-#HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-#    CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
-
 # Comando de inicio
 CMD ["node", "api/index.js"]

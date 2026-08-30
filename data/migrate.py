@@ -234,6 +234,7 @@ class MigrationManager:
 
 
 def main():
+    sys.stdout.reconfigure(encoding='utf-8') # Asegurar salida UTF-8
     # Obtener DATA_DIR de variable de entorno (sin valor por defecto)
     DATA_DIR = os.getenv('DATA_DIR')
     if not DATA_DIR:

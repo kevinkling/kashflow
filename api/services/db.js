@@ -77,9 +77,16 @@ const pool = {
     });
   },
 
-  /**
-   * Cierra la conexión a la base de datos
-   */
+  lastInsertRowid(result) {
+    return result && result.lastInsertRowid;
+  },
+
+  withTransaction(fn) {
+    return db.transaction(fn)();
+  },
+
+  raw: db,
+
   close: () => {
     db.close();
     console.log('🔒 Conexión a SQLite cerrada');

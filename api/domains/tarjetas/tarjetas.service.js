@@ -48,7 +48,8 @@ async function generarResumenTarjeta(tarjetaId, usuarioId, year, month) {
     periodo,
     fecha,
     total || 0,
-    tarjeta.cuenta_pago_id
+    tarjeta.cuenta_pago_id,
+    tarjeta.id
   );
   await repo.vincularResumen(tarjetaId, instanciaId, desde, hasta);
   // Además, vincular únicamente las cuotas que correspondan al periodo del resumen
@@ -80,11 +81,42 @@ async function obtenerResumenTarjetaActual(tarjetaId, usuarioId, year, month) {
   };
 }
 
+async function actualizarTarjeta(tarjetaId, datos) {
+  const tarjeta = await repo.obtenerTarjetaPorId(tarjetaId);
+  if (!tarjeta) throw new Error('Tarjeta no encontrada');
+  const ok = await repo.actualizarTarjeta(tarjetaId, {
+    nombre: datos.nombre,
+    alias: datos.alias,
+    dia_cierre: datos.dia_cierre,
+    dia_vencimiento: datos.dia_vencimiento,
+    cuenta_pago_id: datos.cuenta_pago_id || null
+  });
+  if (!ok) throw new Error('No se pudo actualizar la tarjeta');
+  return repo.obtenerTarjetaPorId(tarjetaId);
+}
+
+async function eliminarTarjeta(tarjetaId) {
+  const tarjeta = await repo.obtenerTarjetaPorId(tarjetaId);
+  if (!tarjeta) throw new Error('Tarjeta no encontrada');
+  try {
+    const ok = await repo.eliminarTarjeta(tarjetaId);
+    if (!ok) throw new Error('No se pudo eliminar la tarjeta');
+    return true;
+  } catch (err) {
+    if (/FOREIGN KEY/i.test(err.message)) {
+      throw new Error('No se puede eliminar: la tarjeta tiene compromisos u obligaciones asociadas.');
+    }
+    throw err;
+  }
+}
+
 module.exports = {
   crearTarjeta: (...args) => repo.crearTarjeta(...args),
   obtenerTarjetasUsuario: (...args) => repo.obtenerTarjetasUsuario(...args),
   obtenerConsumosTarjeta: (...args) => repo.obtenerConsumosTarjeta(...args),
   registrarConsumoTarjeta,
   generarResumenTarjeta,
-  obtenerResumenTarjetaActual
+  obtenerResumenTarjetaActual,
+  actualizarTarjeta,
+  eliminarTarjeta
 };

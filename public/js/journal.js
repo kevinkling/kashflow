@@ -35,6 +35,10 @@ async function loadTransactions() {
                 account_name: item.banco_nombre || item.banco, // Nombre para display
                 account_color: item.banco_color || '#6c757d',
                 banco_destino: item.banco_destino,
+                cuenta_origen_id: item.cuenta_origen_id || null,
+                cuenta_destino_id: item.cuenta_destino_id || null,
+                categoria_id: item.categoria_id || null,
+                transferencia_id: item.transferencia_id || null,
                 amount: monto, // Ya viene con el signo correcto del backend
                 type: item.debeHaber, // 'debe' o 'haber'
                 debit: esDebito ? Math.abs(monto) : 0,
@@ -66,7 +70,7 @@ function applyFilters() {
 
     filteredTransactions = transactions.filter(transaction => {
         // Filtro por fecha
-        const transactionDate = transaction.date.toISOString().split('T')[0];
+        const transactionDate = toLocalYMD(transaction.date);
         if (dateFrom && transactionDate < dateFrom) return false;
         if (dateTo && transactionDate > dateTo) return false;
 
@@ -264,9 +268,9 @@ function initializeDateFilters() {
     const secondToLastDayOfCurrentMonth = new Date(lastDayOfCurrentMonth);
     secondToLastDayOfCurrentMonth.setDate(lastDayOfCurrentMonth.getDate() - 1);
 
-    // Formatear fechas para input type="date" (YYYY-MM-DD)
-    const dateFrom = lastDayOfPreviousMonth.toISOString().split('T')[0];
-    const dateTo = secondToLastDayOfCurrentMonth.toISOString().split('T')[0];
+    // Formatear fechas para input type="date" (YYYY-MM-DD local, no UTC)
+    const dateFrom = toLocalYMD(lastDayOfPreviousMonth);
+    const dateTo = toLocalYMD(secondToLastDayOfCurrentMonth);
 
     // Establecer valores en los campos
     const dateFromInput = document.getElementById('dateFrom');
@@ -418,39 +422,69 @@ function showAddTransactionModal() {
     }
 } */
 
-// Edición rápida y eliminación de transacciones
-function editTransaction(id) {
+function fillAccountSelect(el, selectedId) {
+    if (!el) return;
+    const accounts = (window.KF && KF.store) ? KF.store.getAccounts() : accountsData;
+    el.innerHTML = accounts.map(c =>
+        `<option value="${c.cuenta_id || c.id}">${c.cuenta || c.nombre}</option>`
+    ).join('');
+    if (selectedId != null && selectedId !== '') el.value = String(selectedId);
+}
+
+function syncTransferWidget(tipoEl, widgetEl, destEl, originLabelEl, originTitle) {
+    const isTransfer = tipoEl && tipoEl.value === 'transferencia';
+    if (widgetEl) widgetEl.style.display = isTransfer ? '' : 'none';
+    if (destEl) destEl.required = !!isTransfer;
+    if (originLabelEl) originLabelEl.textContent = isTransfer ? 'Cuenta origen' : 'Cuenta';
+    const originEl = document.getElementById(originTitle);
+    if (originEl) originEl.title = isTransfer ? 'Cuenta origen' : '';
+}
+
+async function fillCategorySelect(el, selectedId) {
+    if (!el) return;
+    try {
+        const res = await fetch('/api/categorias');
+        const cats = res.ok ? await res.json() : [];
+        el.innerHTML = `<option value="">-- Categoría --</option>` + cats.map(cat =>
+            `<option value="${cat.id}">${cat.icono || ''} ${cat.nombre}</option>`
+        ).join('');
+        if (selectedId) el.value = String(selectedId);
+    } catch (err) {
+        console.error('Error cargando categorías:', err);
+    }
+}
+
+// Edición completa del movimiento
+async function editTransaction(id) {
     const transaction = transactions.find(t => t.id === id);
     if (!transaction) return;
-    const newDesc = prompt('Editar descripción', transaction.description);
-    if (newDesc === null) return;
-    const newAmountStr = prompt('Editar monto (positivo)', String(Math.abs(transaction.amount)));
-    if (newAmountStr === null) return;
-    const newAmount = parseFloat(newAmountStr);
-    if (isNaN(newAmount)) {
-        showAlert('Monto inválido', 'warning');
-        return;
-    }
-    const payload = {
-        cuenta_id: transaction.account,
-        tipo: transaction.type || (transaction.amount >= 0 ? 'debe' : 'haber'),
-        monto: Math.abs(newAmount),
-        descripcion: newDesc
-    };
-    fetch(`/api/movimientos/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    }).then(res => {
-        if (!res.ok) throw new Error('Error al actualizar');
-        return res.json();
-    }).then(() => {
-        showAlert('Transacción actualizada', 'success');
-        loadTransactions();
-    }).catch(err => {
-        console.error(err);
-        showAlert('Error al actualizar transacción', 'danger');
-    });
+    const modalEl = document.getElementById('editMoveModal');
+    if (!modalEl) return;
+
+    document.getElementById('emId').value = transaction.id;
+    document.getElementById('emFecha').value = toLocalYMD(transaction.date);
+    document.getElementById('emMonto').value = Math.abs(transaction.amount);
+    document.getElementById('emDesc').value = transaction.description || '';
+
+    const esTransfer = !!transaction.transferencia_id;
+    const tipoEl = document.getElementById('emTipo');
+    if (tipoEl) tipoEl.value = esTransfer ? 'transferencia' : (transaction.type || 'haber');
+
+    const originId = esTransfer ? (transaction.cuenta_origen_id || transaction.account) : transaction.account;
+    const destId = esTransfer ? transaction.cuenta_destino_id : null;
+    fillAccountSelect(document.getElementById('emCuenta'), originId);
+    fillAccountSelect(document.getElementById('emCuentaDestino'), destId);
+    await fillCategorySelect(document.getElementById('emCategoria'), transaction.categoria_id);
+
+    syncTransferWidget(
+        tipoEl,
+        document.getElementById('emTransferWidget'),
+        document.getElementById('emCuentaDestino'),
+        document.getElementById('emCuentaLabel'),
+        'emCuenta'
+    );
+
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
 }
 
 async function deleteTransaction(id) {
@@ -533,8 +567,14 @@ document.addEventListener('DOMContentLoaded', function () {
         const catEl = document.getElementById('qmCategoria');
         const cuentaEl = document.getElementById('qmCuenta');
         const accounts = (window.KF && KF.store) ? KF.store.getAccounts() : accountsData;
+        const destinoEl = document.getElementById('qmCuentaDestino');
         if (cuentaEl) {
             cuentaEl.innerHTML = accounts.map(c =>
+                `<option value="${c.cuenta_id || c.id}">${c.cuenta || c.nombre}</option>`
+            ).join('');
+        }
+        if (destinoEl) {
+            destinoEl.innerHTML = accounts.map(c =>
                 `<option value="${c.cuenta_id || c.id}">${c.cuenta || c.nombre}</option>`
             ).join('');
         }
@@ -559,6 +599,89 @@ document.addEventListener('DOMContentLoaded', function () {
         fillQuickMoveSelects();
     }
 
+    // Toggle transfer widget when tipo changes
+    const qmTipoEl = document.getElementById('qmTipo');
+    const qmTransferWidget = document.getElementById('qmTransferWidget');
+    const qmCuentaDestinoEl = document.getElementById('qmCuentaDestino');
+    if (qmTipoEl) {
+        qmTipoEl.addEventListener('change', () => {
+            const val = qmTipoEl.value;
+            if (val === 'transferencia') {
+                if (qmTransferWidget) qmTransferWidget.style.display = '';
+                if (qmCuentaDestinoEl) qmCuentaDestinoEl.required = true;
+                const qmCuentaEl = document.getElementById('qmCuenta');
+                if (qmCuentaEl) qmCuentaEl.title = 'Cuenta origen';
+            } else {
+                if (qmTransferWidget) qmTransferWidget.style.display = 'none';
+                if (qmCuentaDestinoEl) qmCuentaDestinoEl.required = false;
+                const qmCuentaEl = document.getElementById('qmCuenta');
+                if (qmCuentaEl) qmCuentaEl.title = '';
+            }
+        });
+    }
+
+    const emTipoEl = document.getElementById('emTipo');
+    if (emTipoEl) {
+        emTipoEl.addEventListener('change', () => {
+            syncTransferWidget(
+                emTipoEl,
+                document.getElementById('emTransferWidget'),
+                document.getElementById('emCuentaDestino'),
+                document.getElementById('emCuentaLabel'),
+                'emCuenta'
+            );
+        });
+    }
+
+    const editMoveForm = document.getElementById('editMoveForm');
+    if (editMoveForm) {
+        editMoveForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('emId').value;
+            const tipoVal = document.getElementById('emTipo').value;
+            const cuentaId = Number(document.getElementById('emCuenta').value);
+            const cuentaDestinoId = document.getElementById('emCuentaDestino')
+                ? Number(document.getElementById('emCuentaDestino').value)
+                : null;
+            const monto = Number(document.getElementById('emMonto').value);
+            const descripcion = (document.getElementById('emDesc').value || '').trim()
+                || (tipoVal === 'debe' ? 'Ingreso' : tipoVal === 'transferencia' ? 'Transferencia' : 'Gasto');
+            const categoriaId = document.getElementById('emCategoria').value || null;
+            const fecha = document.getElementById('emFecha').value;
+
+            if (tipoVal === 'transferencia' && (!cuentaDestinoId || cuentaDestinoId === cuentaId)) {
+                showAlert('Seleccione una cuenta destino distinta de la de origen', 'warning');
+                return;
+            }
+
+            const payload = {
+                cuenta_id: cuentaId,
+                tipo: tipoVal,
+                monto,
+                descripcion,
+                categoria_id: categoriaId,
+                fecha
+            };
+            if (tipoVal === 'transferencia') payload.cuenta_destino_id = cuentaDestinoId;
+
+            try {
+                const res = await fetch(`/api/movimientos/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error('Error al actualizar');
+                bootstrap.Modal.getInstance(document.getElementById('editMoveModal')).hide();
+                showAlert('Movimiento actualizado', 'success');
+                await loadTransactions();
+                if (window.KF && KF.emit) KF.emit('kf:movimientos-changed');
+            } catch (err) {
+                console.error(err);
+                showAlert('Error al actualizar el movimiento', 'danger');
+            }
+        });
+    }
+
     if (window.KF && KF.on) {
         KF.on('kf:cuentas-changed', fillQuickMoveSelects);
         KF.on('kf:view-changed', (e) => {
@@ -575,21 +698,54 @@ document.addEventListener('DOMContentLoaded', function () {
             e.preventDefault();
             const categoriaId = document.getElementById('qmCategoria') ? document.getElementById('qmCategoria').value : null;
             const cuentaId = Number(document.getElementById('qmCuenta').value);
+            const tipoEl = document.getElementById('qmTipo');
+            const tipoVal = tipoEl ? tipoEl.value : 'haber';
+            const cuentaDestinoId = document.getElementById('qmCuentaDestino') ? Number(document.getElementById('qmCuentaDestino').value) : null;
             try { localStorage.setItem('kf:lastAccount', String(cuentaId)); } catch (err) {}
             try { if (categoriaId) localStorage.setItem('kf:lastCategory', String(categoriaId)); } catch (err) {}
-            const res = await fetch('/api/movimientos', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    cuenta_id: cuentaId,
-                    tipo: document.getElementById('qmTipo') ? document.getElementById('qmTipo').value : 'haber',
-                    monto: Number(document.getElementById('qmMonto').value),
-                    descripcion: document.getElementById('qmDesc').value || 'Gasto',
-                    categoria_id: categoriaId || null
-                })
-            });
+            // If transferencia, call transfer endpoint
+            let res;
+            if (tipoVal === 'transferencia') {
+                // basic validation
+                if (!cuentaDestinoId || cuentaDestinoId === cuentaId) {
+                    showAlert('Seleccione una cuenta destino distinta de la de origen para transferencias', 'warning');
+                    return;
+                }
+                res = await fetch('/api/transferencias', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        cuenta_origen_id: cuentaId,
+                        cuenta_destino_id: cuentaDestinoId,
+                        monto: Number(document.getElementById('qmMonto').value),
+                        descripcion: document.getElementById('qmDesc').value || 'Transferencia'
+                    })
+                });
+            } else {
+                res = await fetch('/api/movimientos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        cuenta_id: cuentaId,
+                        tipo: tipoVal,
+                        monto: Number(document.getElementById('qmMonto').value),
+                        descripcion: document.getElementById('qmDesc').value || (tipoVal === 'debe' ? 'Ingreso' : 'Gasto'),
+                        categoria_id: categoriaId || null
+                    })
+                });
+            }
             if (res.ok) {
                 e.target.reset();
+                // reset tipo to default 'haber' and hide transfer widget
+                const t = document.getElementById('qmTipo');
+                if (t) t.value = 'haber';
+                const tw = document.getElementById('qmTransferWidget');
+                if (tw) tw.style.display = 'none';
+                const today = toLocalYMD(new Date());
+                const dateToEl = document.getElementById('dateTo');
+                const dateFromEl = document.getElementById('dateFrom');
+                if (dateToEl && dateToEl.value && today > dateToEl.value) dateToEl.value = today;
+                if (dateFromEl && dateFromEl.value && today < dateFromEl.value) dateFromEl.value = today;
                 await fillQuickMoveSelects();
                 await loadTransactions();
                 if (window.KF && KF.emit) KF.emit('kf:movimientos-changed');

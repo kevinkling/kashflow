@@ -25,6 +25,25 @@ router.get('/tarjetas', async (req, res) => {
   }
 });
 
+router.put('/tarjetas/:id', async (req, res) => {
+  try {
+    const { nombre, alias, dia_cierre, dia_vencimiento, cuenta_pago_id } = req.body;
+    const tarjeta = await service.actualizarTarjeta(req.params.id, { nombre, alias, dia_cierre, dia_vencimiento, cuenta_pago_id });
+    res.json(tarjeta);
+  } catch (err) {
+    handle(err, res, 'Error actualizando tarjeta');
+  }
+});
+
+router.delete('/tarjetas/:id', async (req, res) => {
+  try {
+    await service.eliminarTarjeta(req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    handle(err, res, 'Error eliminando tarjeta');
+  }
+});
+
 router.get('/tarjetas/:id/resumen-actual', async (req, res) => {
   try {
     const { usuario_id, year, month } = req.query;

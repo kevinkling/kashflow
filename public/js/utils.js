@@ -15,20 +15,35 @@ function formatDate(dateString) {
     });
 }
 
+function toLocalYMD(date) {
+    const d = date instanceof Date ? date : new Date(date);
+    if (Number.isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
 function parseDate(dateString) {
     // Validar que dateString existe y no es null/undefined
     if (!dateString) {
         return new Date('1900-01-01'); // Fecha muy antigua para identificar datos inválidos
     }
+
+    if (dateString instanceof Date) return dateString;
+
+    const raw = String(dateString);
     
     // Convertir formato DD/MM/YYYY HH:mm:ss a Date
-    if (dateString.includes('/')) {
-        const [datePart, timePart] = dateString.split(' ');
+    if (raw.includes('/')) {
+        const [datePart, timePart] = raw.split(' ');
         const [day, month, year] = datePart.split('/');
         const timeStr = timePart || '00:00:00';
         return new Date(`${year}-${month}-${day}T${timeStr}`);
     }
-    return new Date(dateString);
+    // SQLite datetime('now','localtime') viene como "YYYY-MM-DD HH:mm:ss"
+    const normalized = raw.trim().replace(' ', 'T');
+    return new Date(normalized);
 }
 
 /**

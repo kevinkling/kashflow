@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kashflow-static-v8';
+const CACHE_NAME = 'kashflow-static-v18';
 const ASSETS = [
   '/',
   '/index.html',

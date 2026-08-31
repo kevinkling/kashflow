@@ -1,11 +1,11 @@
 const pool = require('../../db/connection');
 
-async function crearCompromiso(usuarioId, nombre, tipo, frecuencia, diaVencimiento, importeEstimado, cuentaSugeridaId) {
+async function crearCompromiso(usuarioId, nombre, tipo, frecuencia, diaVencimiento, importeEstimado, cuentaSugeridaId, esVariable = 0) {
   const insert = await pool.query(
     `INSERT INTO compromisos
-      (usuario_id, nombre, tipo, frecuencia, dia_vencimiento, importe_estimado, cuenta_sugerida_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [usuarioId, nombre, tipo, frecuencia, diaVencimiento, importeEstimado, cuentaSugeridaId]
+      (usuario_id, nombre, tipo, frecuencia, dia_vencimiento, importe_estimado, cuenta_sugerida_id, es_variable)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [usuarioId, nombre, tipo, frecuencia, diaVencimiento, importeEstimado, cuentaSugeridaId, esVariable ? 1 : 0]
   );
   return insert.lastInsertRowid;
 }
@@ -18,12 +18,12 @@ async function obtenerCompromisosUsuario(usuarioId) {
   return result.rows;
 }
 
-async function crearInstanciaCompromiso(compromisoId, usuarioId, descripcion, periodo, fechaVencimiento, importeEsperado, cuentaPagoId) {
+async function crearInstanciaCompromiso(compromisoId, usuarioId, descripcion, periodo, fechaVencimiento, importeEsperado, cuentaPagoId, tarjetaId = null) {
   const insert = await pool.query(
     `INSERT INTO instancias_compromiso
-      (compromiso_id, usuario_id, descripcion, periodo, fecha_vencimiento, importe_esperado, cuenta_pago_id, estado)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente')`,
-    [compromisoId, usuarioId, descripcion, periodo, fechaVencimiento, importeEsperado, cuentaPagoId]
+      (compromiso_id, usuario_id, descripcion, periodo, fecha_vencimiento, importe_esperado, cuenta_pago_id, tarjeta_id, estado)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pendiente')`,
+    [compromisoId, usuarioId, descripcion, periodo, fechaVencimiento, importeEsperado, cuentaPagoId, tarjetaId]
   );
   return insert.lastInsertRowid;
 }
@@ -64,11 +64,15 @@ async function confirmarInstancia(instanciaId, cuentaPagoId, montoFinal, descrip
 
 async function obtenerAgenda(desde, hasta, usuarioId = null) {
   let query = `SELECT ic.*, c.nombre AS compromiso_nombre, c.tipo AS compromiso_tipo, c.frecuencia, c.total_cuotas AS compromiso_total_cuotas,
-    COALESCE(cp.alias, cs.alias) AS cuenta_alias
+    c.es_variable AS compromiso_es_variable,
+    COALESCE(cp.alias, cs.alias) AS cuenta_alias,
+    COALESCE(ic.tarjeta_id, c.tarjeta_id) AS tarjeta_id,
+    t.nombre AS tarjeta_nombre
    FROM instancias_compromiso ic
    LEFT JOIN compromisos c ON ic.compromiso_id = c.id
    LEFT JOIN cuentas cp ON ic.cuenta_pago_id = cp.id
    LEFT JOIN cuentas cs ON c.cuenta_sugerida_id = cs.id
+   LEFT JOIN tarjetas t ON t.id = COALESCE(ic.tarjeta_id, c.tarjeta_id)
    WHERE DATE(ic.fecha_vencimiento) BETWEEN DATE(?) AND DATE(?)`;
   const params = [desde, hasta];
   if (usuarioId) {
@@ -93,6 +97,39 @@ async function obtenerInstanciasParaSimulacion(desde, hasta, usuarioId = null) {
   }
   const result = await pool.query(query, params);
   return result.rows;
+}
+
+async function obtenerInstanciaPorId(instanciaId) {
+  const result = await pool.query('SELECT * FROM instancias_compromiso WHERE id = ?', [instanciaId]);
+  return result.rows[0] || null;
+}
+
+async function actualizarInstancia(instanciaId, { descripcion, fecha_vencimiento, importe_esperado, cuenta_pago_id, estado }) {
+  const result = await pool.query(
+    `UPDATE instancias_compromiso SET descripcion = ?, fecha_vencimiento = ?, importe_esperado = ?, cuenta_pago_id = ?, estado = ?,
+       fecha_modificacion = datetime('now','localtime')
+     WHERE id = ?`,
+    [descripcion, fecha_vencimiento, importe_esperado, cuenta_pago_id, estado, instanciaId]
+  );
+  return result.rowCount > 0;
+}
+
+async function obtenerCompromisoPorId(compromisoId) {
+  const result = await pool.query('SELECT * FROM compromisos WHERE id = ?', [compromisoId]);
+  return result.rows[0] || null;
+}
+
+async function actualizarCompromisoTipoYVariable(compromisoId, { tipo, es_variable }) {
+  const result = await pool.query(
+    `UPDATE compromisos SET tipo = ?, es_variable = ?, fecha_modificacion = datetime('now','localtime') WHERE id = ?`,
+    [tipo, es_variable ? 1 : 0, compromisoId]
+  );
+  return result.rowCount > 0;
+}
+
+async function eliminarInstancia(instanciaId) {
+  const result = await pool.query('DELETE FROM instancias_compromiso WHERE id = ?', [instanciaId]);
+  return result.rowCount > 0;
 }
 
 async function existeInstanciaEnPeriodo(compromisoId, periodo) {
@@ -120,6 +157,11 @@ module.exports = {
   obtenerAgenda,
   obtenerInstanciasParaSimulacion,
   existeInstanciaEnPeriodo,
-  actualizarCompromisoExtras
+  actualizarCompromisoExtras,
+  obtenerInstanciaPorId,
+  actualizarInstancia,
+  eliminarInstancia,
+  obtenerCompromisoPorId,
+  actualizarCompromisoTipoYVariable
 };
 

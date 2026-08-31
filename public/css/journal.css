@@ -295,6 +295,34 @@ header {
   line-height: 1;
 }
 
+.obl-row--group {
+  background-color: rgba(139, 92, 246, 0.08) !important;
+  transition: background-color 0.15s ease;
+}
+
+.obl-row--group:hover {
+  background-color: rgba(139, 92, 246, 0.16) !important;
+}
+
+.obl-row--group td:first-child {
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+
+.obl-group-caret {
+  transition: transform 0.15s ease;
+  display: inline-block;
+}
+
+.obl-group-row td {
+  padding-left: 2.25rem !important;
+  opacity: 0.92;
+}
+
+/* Columna "Vence" oculta temporalmente (a pedido del usuario) */
+.col-fecha-oculta {
+  visibility: collapse;
+}
+
 #obligacionesTableBody button:disabled {
   opacity: 1;
 }

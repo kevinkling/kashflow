@@ -20,7 +20,8 @@ async function generarInstanciasDelPeriodo(usuarioId, year, month) {
       periodo,
       fecha,
       c.importe_estimado,
-      c.cuenta_sugerida_id
+      c.cuenta_sugerida_id,
+      c.tarjeta_id || null
     );
     creadas.push(id);
   }
@@ -73,12 +74,47 @@ async function crearCompromisoEnCuotas({ usuario_id, nombre, monto_total, total_
       periodo,
       fechaVenc,
       thisMonto,
-      cuenta_sugerida_id
+      cuenta_sugerida_id,
+      tarjeta_id || null
     );
     cuotas.push(instanciaId);
   }
 
   return { compromisoId, instancias: cuotas };
+}
+
+async function actualizarInstancia(instanciaId, datos) {
+  const instancia = await repo.obtenerInstanciaPorId(instanciaId);
+  if (!instancia) throw new Error('Obligación no encontrada');
+  const ok = await repo.actualizarInstancia(instanciaId, {
+    descripcion: datos.descripcion,
+    fecha_vencimiento: datos.fecha_vencimiento,
+    importe_esperado: datos.importe_esperado,
+    cuenta_pago_id: datos.cuenta_pago_id || null,
+    estado: datos.estado || instancia.estado
+  });
+  if (!ok) throw new Error('No se pudo actualizar la obligación');
+
+  // tipo (egreso/ingreso) y es_variable son atributos del compromiso, no de la instancia puntual
+  if (instancia.compromiso_id && (datos.tipo !== undefined || datos.es_variable !== undefined)) {
+    const compromiso = await repo.obtenerCompromisoPorId(instancia.compromiso_id);
+    if (compromiso) {
+      await repo.actualizarCompromisoTipoYVariable(instancia.compromiso_id, {
+        tipo: datos.tipo !== undefined ? datos.tipo : compromiso.tipo,
+        es_variable: datos.es_variable !== undefined ? datos.es_variable : compromiso.es_variable
+      });
+    }
+  }
+
+  return repo.obtenerInstanciaPorId(instanciaId);
+}
+
+async function eliminarInstancia(instanciaId) {
+  const instancia = await repo.obtenerInstanciaPorId(instanciaId);
+  if (!instancia) throw new Error('Obligación no encontrada');
+  const ok = await repo.eliminarInstancia(instanciaId);
+  if (!ok) throw new Error('No se pudo eliminar la obligación');
+  return true;
 }
 
 // Sincronizar mes: genera instancias recurrentes y resúmenes de tarjetas (idempotente)
@@ -114,6 +150,8 @@ module.exports = {
   obtenerAgenda: (...args) => repo.obtenerAgenda(...args),
   generarInstanciasDelPeriodo,
   crearCompromisoEnCuotas,
-  sincronizarMes
+  sincronizarMes,
+  actualizarInstancia,
+  eliminarInstancia
 };
 

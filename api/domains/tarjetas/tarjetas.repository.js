@@ -26,6 +26,21 @@ async function obtenerTarjetaPorId(tarjetaId, usuarioId = null) {
   return result.rows[0] || null;
 }
 
+async function actualizarTarjeta(tarjetaId, { nombre, alias, dia_cierre, dia_vencimiento, cuenta_pago_id }) {
+  const result = await pool.query(
+    `UPDATE tarjetas SET nombre = ?, alias = ?, dia_cierre = ?, dia_vencimiento = ?, cuenta_pago_id = ?,
+       fecha_modificacion = datetime('now','localtime')
+     WHERE id = ?`,
+    [nombre, alias, dia_cierre, dia_vencimiento, cuenta_pago_id, tarjetaId]
+  );
+  return result.rowCount > 0;
+}
+
+async function eliminarTarjeta(tarjetaId) {
+  const result = await pool.query('DELETE FROM tarjetas WHERE id = ?', [tarjetaId]);
+  return result.rowCount > 0;
+}
+
 async function insertarConsumo(tarjetaId, descripcion, monto, fechaCompra, cuotas) {
   const insert = await pool.query(
     `INSERT INTO consumos_tarjeta (tarjeta_id, descripcion, monto, fecha_compra, cuotas)
@@ -141,6 +156,8 @@ module.exports = {
   crearTarjeta,
   obtenerTarjetasUsuario,
   obtenerTarjetaPorId,
+  actualizarTarjeta,
+  eliminarTarjeta,
   insertarConsumo,
   insertarCuotas,
   obtenerConsumosTarjeta,

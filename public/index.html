@@ -9,9 +9,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/x-icon" href="icons/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
     <link rel="manifest" href="./manifest.json">
-    <meta name="theme-color" content="#4CAF50">
+    <meta name="theme-color" content="#09090b">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="KashFlow">
     <link rel="stylesheet" href="./css/journal.css" />
     <style>
       /* Fix para que el modal de confirmación aparezca sobre el de gestión */
@@ -27,7 +33,7 @@
     <header class="container-fluid py-1 bg-dark bg-opacity-75">
       <div class="kf-bar">
         <h1 class="kf-bar__mark">
-          <img src="icons/favicon.ico" alt="">
+          <img src="icons/icon-192.png" alt="">
           KashFlow
         </h1>
         <div class="kf-bar__tools">
@@ -224,14 +230,42 @@
             Registro de Movimientos
           </h5>
         </div>
-        <div class="card-body border-bottom border-secondary">
+          <div class="card-body border-bottom border-secondary">
           <h6 class="text-white">Nuevo movimiento del día</h6>
           <form id="quickMoveForm" class="row g-2 align-items-end">
-            <div class="col-md-2"><input id="qmMonto" type="number" step="0.01" class="form-control" placeholder="Monto" required autofocus></div>
-            <div class="col-md-3"><select id="qmCategoria" class="form-select"><option value="">-- Categoría --</option></select></div>
-            <div class="col-md-3"><select id="qmCuenta" class="form-select" required></select></div>
-            <div class="col-md-2"><input id="qmDesc" class="form-control" placeholder="Descripción (opcional)"></div>
-            <div class="col-md-2"><button class="btn btn-primary w-100" type="submit">Registrar</button></div>
+            <div class="col-md-2">
+              <input id="qmMonto" type="number" step="0.01" class="form-control" placeholder="Monto" required autofocus>
+            </div>
+            <div class="col-md-2">
+              <select id="qmTipo" class="form-select" title="Tipo de movimiento">
+                <option value="haber">Egreso</option>
+                <option value="debe">Ingreso</option>
+                <option value="transferencia">Transferencia interna</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <select id="qmCategoria" class="form-select"><option value="">-- Categoría --</option></select>
+            </div>
+            <div class="col-md-3">
+              <select id="qmCuenta" class="form-select" required></select>
+            </div>
+            <div class="col-md-2">
+              <input id="qmDesc" class="form-control" placeholder="Descripción (opcional)">
+            </div>
+            <div class="col-md-12 mt-2" id="qmTransferWidget" style="display:none">
+              <div class="row g-2">
+                <div class="col-md-6">
+                  <label for="qmCuentaDestino" class="form-label visually-hidden">Cuenta destino</label>
+                  <select id="qmCuentaDestino" class="form-select" title="Cuenta destino (solo para transferencias)"></select>
+                </div>
+                <div class="col-md-6 d-flex align-items-center">
+                  <small class="text-white-50">Seleccione la cuenta destino para transferencias internas</small>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-2">
+              <button class="btn btn-primary w-100" type="submit">Registrar</button>
+            </div>
           </form>
         </div>
         <div class="card-body p-0">
@@ -357,13 +391,20 @@
               <div class="card-body p-0">
                 <div class="table-responsive">
                   <table class="table table-dark table-hover mb-0">
+                    <colgroup>
+                      <col class="col-fecha-oculta">
+                      <col>
+                      <col>
+                      <col>
+                      <col>
+                    </colgroup>
                     <thead>
                       <tr>
                         <th>Vence</th>
                         <th>Tipo</th>
                         <th>Descripción</th>
                         <th>Esperado</th>
-                        <th class="text-center">Pagado</th>
+                        <th class="text-center">Acciones</th>
                       </tr>
                     </thead>
                     <tbody id="obligacionesTableBody"></tbody>
@@ -488,14 +529,16 @@
                     <th>Día cierre</th>
                     <th>Día vencimiento</th>
                     <th>Cuenta de pago</th>
+                    <th class="text-center">Acciones</th>
                   </tr>
                 </thead>
                 <tbody id="tarjetasMaestroBody">
                 </tbody>
               </table>
             </div>
-            <h6 class="text-white mb-3">Nueva tarjeta</h6>
+            <h6 class="text-white mb-3" id="cardFormTitle">Nueva tarjeta</h6>
             <form id="cardForm">
+              <input type="hidden" id="cardId">
               <input id="cardNombre" class="form-control mb-2" placeholder="Nombre (Visa)" required>
               <input id="cardAlias" class="form-control mb-2" placeholder="Alias" required>
               <div class="row g-2 mb-2">
@@ -503,8 +546,11 @@
                 <div class="col"><input id="cardVence" type="number" min="1" max="31" class="form-control" placeholder="Día vencimiento" required></div>
               </div>
               <select id="cardCuenta" class="form-select mb-2"></select>
-              <button class="btn btn-success" type="submit">
+              <button class="btn btn-success" type="submit" id="cardSubmitBtn">
                 <i class="bi bi-plus-lg me-2"></i>Crear tarjeta
+              </button>
+              <button class="btn btn-secondary" type="button" id="cardCancelEditBtn" style="display:none">
+                Cancelar edición
               </button>
             </form>
             <hr class="border-secondary my-4">
@@ -625,64 +671,60 @@
       </div>
     </div>
 
-    <!-- Modal para Agregar/Editar Transacción -->
-    <!-- <div class="modal fade" id="addTransactionModal" tabindex="-1" aria-labelledby="addTransactionModalLabel" aria-hidden="true">
+    <!-- Modal para Editar Movimiento -->
+    <div class="modal fade" id="editMoveModal" tabindex="-1" aria-labelledby="editMoveModalLabel" aria-hidden="true">
       <div class="modal-dialog">
         <div class="modal-content bg-dark">
           <div class="modal-header border-secondary">
-            <h5 class="modal-title text-white" id="addTransactionModalLabel">Nueva Transacción</h5>
+            <h5 class="modal-title text-white" id="editMoveModalLabel">Editar movimiento</h5>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
-          <div class="modal-body">
-            <form id="transactionForm">
-              <input type="hidden" id="transactionId">
-              <div class="mb-3">
-                <label for="transactionDate" class="form-label text-white">Fecha:</label>
-                <input type="date" class="form-control" id="transactionDate" required>
+          <form id="editMoveForm">
+            <div class="modal-body">
+              <input type="hidden" id="emId">
+              <div class="mb-2">
+                <label for="emFecha" class="form-label text-white">Fecha</label>
+                <input type="date" class="form-control" id="emFecha" required>
               </div>
-              <div class="mb-3">
-                <label for="transactionDescription" class="form-label text-white">Descripción:</label>
-                <input type="text" class="form-control" id="transactionDescription" placeholder="Descripción de la transacción" required>
-              </div>
-              <div class="mb-3">
-                <label for="transactionAccount" class="form-label text-white">Cuenta:</label>
-                <select class="form-select" id="transactionAccount" required>
-                  <option value="">Seleccionar cuenta...</option>
-                  <option value="UALA">Ualá</option>
-                  <option value="MERCADOPAGO">MercadoPago</option>
-                  <option value="BBVA">BBVA</option>
-                  <option value="LEMON">Lemon</option>
-                  <option value="NARANJAX">NaranjaX</option>
-                  <option value="EFECTIVO">Efectivo</option>
+              <div class="mb-2">
+                <label for="emTipo" class="form-label text-white">Tipo</label>
+                <select id="emTipo" class="form-select" required>
+                  <option value="haber">Egreso</option>
+                  <option value="debe">Ingreso</option>
+                  <option value="transferencia">Transferencia interna</option>
                 </select>
               </div>
-              <div class="row">
-                <div class="col-md-6">
-                  <div class="mb-3">
-                    <label for="transactionDebit" class="form-label text-white">Debe (Ingreso):</label>
-                    <input type="number" step="0.01" class="form-control" id="transactionDebit" placeholder="0.00">
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="mb-3">
-                    <label for="transactionCredit" class="form-label text-white">Haber (Egreso):</label>
-                    <input type="number" step="0.01" class="form-control" id="transactionCredit" placeholder="0.00">
-                  </div>
-                </div>
+              <div class="mb-2">
+                <label for="emCategoria" class="form-label text-white">Categoría</label>
+                <select id="emCategoria" class="form-select">
+                  <option value="">-- Categoría --</option>
+                </select>
               </div>
-              <div class="text-muted small mb-3">
-                <i class="bi bi-info-circle me-1"></i>
-                Ingrese el monto solo en uno de los campos (Debe para ingresos, Haber para gastos)
+              <div class="mb-2">
+                <label for="emCuenta" class="form-label text-white" id="emCuentaLabel">Cuenta</label>
+                <select id="emCuenta" class="form-select" required></select>
               </div>
-            </form>
-          </div>
-          <div class="modal-footer border-secondary">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button type="button" class="btn btn-success" id="saveTransactionBtn">Guardar</button>
-          </div>
+              <div class="mb-2" id="emTransferWidget" style="display:none">
+                <label for="emCuentaDestino" class="form-label text-white">Cuenta destino</label>
+                <select id="emCuentaDestino" class="form-select"></select>
+              </div>
+              <div class="mb-2">
+                <label for="emMonto" class="form-label text-white">Monto</label>
+                <input id="emMonto" type="number" step="0.01" min="0.01" class="form-control" required>
+              </div>
+              <div class="mb-2">
+                <label for="emDesc" class="form-label text-white">Descripción</label>
+                <input id="emDesc" class="form-control" placeholder="Descripción">
+              </div>
+            </div>
+            <div class="modal-footer border-secondary">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+              <button type="submit" class="btn btn-success">Guardar</button>
+            </div>
+          </form>
         </div>
       </div>
-    </div> -->
+    </div>
 
     <!-- Modal compromiso -->
     <div class="modal fade" id="commitmentModal" tabindex="-1">
@@ -712,6 +754,15 @@
                 <option value="unica">Única</option>
               </select>
               <input id="cmDia" type="number" min="1" max="31" class="form-control mb-2" placeholder="Día de vencimiento">
+              <div id="cmVariableWrap" class="mb-2">
+                <label class="form-label text-white-50 small mb-1 d-block">Tipo de monto</label>
+                <div class="btn-group w-100" role="group">
+                  <input type="radio" class="btn-check" name="cmVariable" id="cmVariableNo" value="0" checked>
+                  <label class="btn btn-outline-secondary" for="cmVariableNo">Fijo (mismo importe)</label>
+                  <input type="radio" class="btn-check" name="cmVariable" id="cmVariableSi" value="1">
+                  <label class="btn btn-outline-secondary" for="cmVariableSi">Variable (cambia cada mes)</label>
+                </div>
+              </div>
 
               <!-- Campos para Compras -->
               <input id="cmMonto" type="number" step="0.01" class="form-control mb-2" placeholder="Importe total" required>
@@ -721,14 +772,86 @@
                 <select id="cmTarjeta" class="form-select mb-2"><option value="">Seleccionar tarjeta (opcional)</option></select>
               </div>
 
-              <!-- Cuenta de pago para gastos fijos/confirmaciones -->
-              <select id="cmCuenta" class="form-select mb-2"></select>
+              <!-- Cuenta de pago para gastos fijos/confirmaciones (se oculta si se eligió una tarjeta) -->
+              <div id="cmCuentaWrap">
+                <label for="cmCuenta" class="form-label text-white-50 small mb-1">Cuenta de pago</label>
+                <select id="cmCuenta" class="form-select mb-2"></select>
+              </div>
             </form>
           </div>
           <div class="modal-footer border-secondary">
             <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
             <button class="btn btn-success" id="saveCommitmentBtn">Guardar</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal editar obligación -->
+    <div class="modal fade" id="editObligacionModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content bg-dark">
+          <div class="modal-header border-secondary">
+            <h5 class="modal-title text-white">Editar obligación</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <form id="editObligacionForm">
+            <div class="modal-body">
+              <input type="hidden" id="eoId">
+              <div class="mb-2">
+                <label for="eoDesc" class="form-label text-white">Descripción</label>
+                <input id="eoDesc" class="form-control" required>
+              </div>
+              <div class="mb-2">
+                <label for="eoFecha" class="form-label text-white">Fecha de vencimiento</label>
+                <input id="eoFecha" type="date" class="form-control" required>
+              </div>
+              <div class="mb-2">
+                <label for="eoMonto" class="form-label text-white">Importe esperado</label>
+                <input id="eoMonto" type="number" step="0.01" min="0" class="form-control" required>
+              </div>
+              <div class="mb-2">
+                <label for="eoCuenta" class="form-label text-white">Cuenta de pago</label>
+                <select id="eoCuenta" class="form-select">
+                  <option value="">-- Sin especificar --</option>
+                </select>
+              </div>
+              <div class="mb-2">
+                <label for="eoEstado" class="form-label text-white">Estado</label>
+                <select id="eoEstado" class="form-select">
+                  <option value="pendiente">Pendiente</option>
+                  <option value="vencido">Vencido</option>
+                  <option value="cancelado">Cancelado</option>
+                  <option value="pagado" disabled>Pagado (usar botón de confirmar pago)</option>
+                </select>
+              </div>
+              <div class="mb-2" id="eoTipoWrap">
+                <label for="eoTipo" class="form-label text-white">Tipo</label>
+                <select id="eoTipo" class="form-select">
+                  <option value="egreso">Egreso</option>
+                  <option value="ingreso">Ingreso</option>
+                </select>
+                <small class="text-white-50">Aplica a todas las cuotas/repeticiones de esta obligación.</small>
+              </div>
+              <div class="mb-2" id="eoVariableWrap">
+                <label class="form-label text-white-50 small mb-1 d-block">Tipo de monto</label>
+                <div class="btn-group w-100" role="group">
+                  <input type="radio" class="btn-check" name="eoVariable" id="eoVariableNo" value="0" checked>
+                  <label class="btn btn-outline-secondary" for="eoVariableNo">Fijo</label>
+                  <input type="radio" class="btn-check" name="eoVariable" id="eoVariableSi" value="1">
+                  <label class="btn btn-outline-secondary" for="eoVariableSi">Variable</label>
+                </div>
+                <small class="text-white-50 d-block mt-1">También aplica a todas las cuotas/repeticiones.</small>
+              </div>
+            </div>
+            <div class="modal-footer border-secondary">
+              <button type="button" class="btn btn-outline-danger me-auto" id="eoDeleteBtn">
+                <i class="bi bi-trash me-1"></i>Eliminar
+              </button>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+              <button type="submit" class="btn btn-success">Guardar</button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

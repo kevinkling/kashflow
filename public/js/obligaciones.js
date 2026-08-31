@@ -11,9 +11,20 @@ document.addEventListener('DOMContentLoaded', () => {
     return new Date(year, month, 0).getDate();
   }
 
-  const nowInit = new Date();
-  let viewYear = nowInit.getFullYear();
-  let viewMonth = nowInit.getMonth() + 1;
+  function nextCalendarMonth(from = new Date()) {
+    const d = new Date(from.getFullYear(), from.getMonth() + 1, 1);
+    return { year: d.getFullYear(), month: d.getMonth() + 1 };
+  }
+
+  function setViewToNextMonth() {
+    const next = nextCalendarMonth();
+    viewYear = next.year;
+    viewMonth = next.month;
+  }
+
+  const initialMonth = nextCalendarMonth();
+  let viewYear = initialMonth.year;
+  let viewMonth = initialMonth.month;
 
   function monthRange() {
     const desde = `${viewYear}-${pad2(viewMonth)}-01`;
@@ -41,6 +52,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function esMontoVariable(r) {
+    // Prioridad: elección explícita del usuario al crear la obligación
+    if (r.compromiso_es_variable === 1 || r.compromiso_es_variable === true) return true;
+    if (r.compromiso_id && (r.compromiso_es_variable === 0 || r.compromiso_es_variable === false)) return false;
+    // Fallback heurístico para compromisos sin el campo (datos viejos) o sin compromiso asociado
     const texto = `${r.compromiso_nombre || ''} ${r.descripcion || ''}`.toLowerCase();
     if (texto.includes('resumen')) return true;
     if (!r.compromiso_id) return true;
@@ -82,55 +97,190 @@ document.addEventListener('DOMContentLoaded', () => {
         bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmPayModal')).show();
       });
     });
+    root.querySelectorAll('[data-edit-obligacion]').forEach(btn => {
+      btn.addEventListener('click', () => openEditObligacion(Number(btn.dataset.editObligacion)));
+    });
+    root.querySelectorAll('[data-delete-obligacion]').forEach(btn => {
+      btn.addEventListener('click', () => deleteObligacion(Number(btn.dataset.deleteObligacion)));
+    });
   }
+
+  let agendaRowsCache = [];
+
+  function openEditObligacion(id) {
+    const r = agendaRowsCache.find(x => Number(x.id) === id);
+    if (!r) return;
+    document.getElementById('eoId').value = r.id;
+    document.getElementById('eoDesc').value = r.descripcion || r.compromiso_nombre || '';
+    document.getElementById('eoFecha').value = String(r.fecha_vencimiento).slice(0, 10);
+    document.getElementById('eoMonto').value = r.importe_esperado;
+    const eoEstadoEl = document.getElementById('eoEstado');
+    if (eoEstadoEl) {
+      const yaPagado = r.estado === 'pagado';
+      eoEstadoEl.dataset.actualEstado = r.estado;
+      eoEstadoEl.value = yaPagado ? 'pendiente' : r.estado;
+      eoEstadoEl.disabled = yaPagado;
+      eoEstadoEl.title = yaPagado ? 'Ya está pagada; para revertirla eliminala y volvé a generarla.' : '';
+    }
+    const eoCuentaEl = document.getElementById('eoCuenta');
+    if (eoCuentaEl) {
+      const accounts = (window.KF && KF.store) ? KF.store.getAccounts() : [];
+      eoCuentaEl.innerHTML = '<option value="">-- Sin especificar --</option>' + accounts.map(c =>
+        `<option value="${c.cuenta_id || c.id}">${c.cuenta || c.nombre}</option>`
+      ).join('');
+      eoCuentaEl.value = r.cuenta_pago_id ? String(r.cuenta_pago_id) : '';
+    }
+    // Tipo (egreso/ingreso) y Fijo/Variable son atributos del compromiso: solo aplican si hay uno asociado
+    const eoTipoWrap = document.getElementById('eoTipoWrap');
+    const eoVariableWrap = document.getElementById('eoVariableWrap');
+    const tieneCompromiso = !!r.compromiso_id;
+    if (eoTipoWrap) eoTipoWrap.style.display = tieneCompromiso ? '' : 'none';
+    if (eoVariableWrap) eoVariableWrap.style.display = tieneCompromiso ? '' : 'none';
+    if (tieneCompromiso) {
+      const eoTipoEl = document.getElementById('eoTipo');
+      if (eoTipoEl) eoTipoEl.value = r.compromiso_tipo || 'egreso';
+      const variableRadio = document.getElementById(r.compromiso_es_variable ? 'eoVariableSi' : 'eoVariableNo');
+      if (variableRadio) variableRadio.checked = true;
+    }
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('editObligacionModal')).show();
+  }
+
+  async function deleteObligacion(id) {
+    const r = agendaRowsCache.find(x => Number(x.id) === id);
+    const desc = r ? (r.descripcion || r.compromiso_nombre || '') : `#${id}`;
+    if (!confirm(`¿Eliminar la obligación "${desc}"? Esta acción no se puede deshacer.`)) return;
+    const res = await fetch(`/api/planning/instancias/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      await syncAndLoadAgenda();
+      if (window.KF && KF.emit) KF.emit('kf:obligaciones-changed');
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Error al eliminar la obligación');
+    }
+  }
+
+  function buildObligacionRow(r, variable) {
+    const tr = document.createElement('tr');
+    tr.className = variable ? 'obl-row obl-row--variable' : 'obl-row obl-row--fijo';
+    const pagado = r.estado === 'pagado';
+    const money = typeof formatCurrency === 'function'
+      ? formatCurrency(r.importe_esperado)
+      : `$${Number(r.importe_esperado).toLocaleString('es-AR')}`;
+    const tipoLabel = variable ? 'Variable' : 'Fijo';
+    const tipoClass = variable ? 'obl-tipo obl-tipo--variable' : 'obl-tipo obl-tipo--fijo';
+    const fechaClass = r.estado === 'vencido' ? 'text-danger' : '';
+    const toggleClass = pagado ? 'btn-outline-success' : (r.estado === 'vencido' ? 'btn-outline-danger' : 'btn-outline-success');
+    const toggleIcon = pagado ? 'bi-toggle-on' : 'bi-toggle-off';
+    const toggleTitle = pagado ? 'Pagado' : (r.estado === 'vencido' ? 'Vencido — marcar como pagado' : 'Marcar como pagado');
+    const confirmAttrs = pagado
+      ? ''
+      : ` data-confirm="${r.id}" data-monto="${r.importe_esperado}" data-desc="${(r.descripcion || '').replace(/"/g, '&quot;')}"`;
+    // Construir descripción y badge de cuota si aplica
+    const nombre = r.compromiso_nombre || r.descripcion || '';
+    let descripcionHtml = nombre;
+    if (r.compromiso_total_cuotas && Number(r.compromiso_total_cuotas) > 1) {
+      const match = (r.descripcion || r.compromiso_nombre || '').match(/Cuota\s*(\d+)\/(\d+)/i);
+      const cuotaText = match ? `Cuota ${match[1]}/${match[2]}` : `Cuota 1/${r.compromiso_total_cuotas}`;
+      descripcionHtml = `<div>${nombre}</div><small class="text-white-50">${cuotaText}</small>`;
+    }
+
+    tr.dataset.instanciaId = r.id;
+    tr.innerHTML = `
+      <td class="${fechaClass}">${r.fecha_vencimiento}</td>
+      <td><span class="${tipoClass}">${tipoLabel}</span></td>
+      <td>${descripcionHtml}</td>
+      <td>${money}</td>
+      <td class="text-center text-nowrap">
+        <button type="button" class="btn btn-sm ${toggleClass}"${confirmAttrs} title="${toggleTitle}" ${pagado ? 'disabled' : ''}>
+          <i class="bi ${toggleIcon}"></i>
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-light ms-1" data-edit-obligacion="${r.id}" title="Editar">
+          <i class="bi bi-pencil"></i>
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-danger ms-1" data-delete-obligacion="${r.id}" title="Eliminar">
+          <i class="bi bi-trash"></i>
+        </button>
+      </td>
+    `;
+    return tr;
+  }
+
+  function buildTarjetaGroupHeader(group) {
+    const tr = document.createElement('tr');
+    tr.className = 'obl-row obl-row--group';
+    tr.style.cursor = 'pointer';
+    const total = group.items.reduce((s, it) => s + (Number(it.r.importe_esperado) || 0), 0);
+    const money = typeof formatCurrency === 'function' ? formatCurrency(total) : `$${total.toLocaleString('es-AR')}`;
+    const count = group.items.length;
+    tr.innerHTML = `
+      <td colspan="3">
+        <i class="bi bi-chevron-right obl-group-caret me-2"></i>
+        <i class="bi bi-credit-card me-1"></i>
+        <strong>${group.nombre}</strong>
+        <span class="text-white-50 ms-2">(${count} ${count === 1 ? 'gasto' : 'gastos'})</span>
+      </td>
+      <td>${money}</td>
+      <td></td>
+    `;
+    tr.addEventListener('click', () => {
+      const expanded = tr.classList.toggle('expanded');
+      const caret = tr.querySelector('.obl-group-caret');
+      if (caret) caret.className = expanded ? 'bi bi-chevron-down obl-group-caret me-2' : 'bi bi-chevron-right obl-group-caret me-2';
+      tbodyRef.querySelectorAll(`tr.obl-group-row[data-group-id="${group.id}"]`).forEach(row => {
+        row.style.display = expanded ? '' : 'none';
+      });
+    });
+    return tr;
+  }
+
+  let tbodyRef = null;
 
   function renderObligacionesGrid(tbody, fijos, variables) {
     if (!tbody) return;
+    tbodyRef = tbody;
     tbody.innerHTML = '';
     const tagged = fijos.map(r => ({ r, variable: false }))
-      .concat(variables.map(r => ({ r, variable: true })))
-      .sort((a, b) => String(a.r.fecha_vencimiento).localeCompare(String(b.r.fecha_vencimiento)));
+      .concat(variables.map(r => ({ r, variable: true })));
     if (!tagged.length) {
       tbody.innerHTML = '<tr><td colspan="5" class="text-muted px-3 py-3">No hay obligaciones en este mes.</td></tr>';
       return;
     }
-    tagged.forEach(({ r, variable }) => {
-      const tr = document.createElement('tr');
-      tr.className = variable ? 'obl-row obl-row--variable' : 'obl-row obl-row--fijo';
-      const pagado = r.estado === 'pagado';
-      const money = typeof formatCurrency === 'function'
-        ? formatCurrency(r.importe_esperado)
-        : `$${Number(r.importe_esperado).toLocaleString('es-AR')}`;
-      const tipoLabel = variable ? 'Variable' : 'Fijo';
-      const tipoClass = variable ? 'obl-tipo obl-tipo--variable' : 'obl-tipo obl-tipo--fijo';
-      const fechaClass = r.estado === 'vencido' ? 'text-danger' : '';
-      const toggleClass = pagado ? 'btn-outline-success' : (r.estado === 'vencido' ? 'btn-outline-danger' : 'btn-outline-success');
-      const toggleIcon = pagado ? 'bi-toggle-on' : 'bi-toggle-off';
-      const toggleTitle = pagado ? 'Pagado' : (r.estado === 'vencido' ? 'Vencido — marcar como pagado' : 'Marcar como pagado');
-      const confirmAttrs = pagado
-        ? ''
-        : ` data-confirm="${r.id}" data-monto="${r.importe_esperado}" data-desc="${(r.descripcion || '').replace(/"/g, '&quot;')}"`;
-      // Construir descripción y badge de cuota si aplica
-      const nombre = r.compromiso_nombre || r.descripcion || '';
-      let descripcionHtml = nombre;
-      if (r.compromiso_total_cuotas && Number(r.compromiso_total_cuotas) > 1) {
-        const match = (r.descripcion || r.compromiso_nombre || '').match(/Cuota\s*(\d+)\/(\d+)/i);
-        const cuotaText = match ? `Cuota ${match[1]}/${match[2]}` : `Cuota 1/${r.compromiso_total_cuotas}`;
-        descripcionHtml = `<div>${nombre}</div><small class="text-white-50">${cuotaText}</small>`;
-      }
 
-      tr.innerHTML = `
-        <td class="${fechaClass}">${r.fecha_vencimiento}</td>
-        <td><span class="${tipoClass}">${tipoLabel}</span></td>
-        <td>${descripcionHtml}</td>
-        <td>${money}</td>
-        <td class="text-center">
-          <button type="button" class="btn btn-sm ${toggleClass}"${confirmAttrs} title="${toggleTitle}" ${pagado ? 'disabled' : ''}>
-            <i class="bi ${toggleIcon}"></i>
-          </button>
-        </td>
-      `;
-      tbody.appendChild(tr);
+    // Agrupar por tarjeta (cuando la instancia u su compromiso tienen tarjeta_id)
+    const groups = new Map();
+    const standalone = [];
+    tagged.forEach(item => {
+      const tId = item.r.tarjeta_id;
+      if (tId) {
+        if (!groups.has(tId)) {
+          groups.set(tId, { id: tId, nombre: item.r.tarjeta_nombre || `Tarjeta #${tId}`, items: [] });
+        }
+        groups.get(tId).items.push(item);
+      } else {
+        standalone.push(item);
+      }
+    });
+
+    const combined = standalone.map(item => ({ kind: 'row', item, fecha: item.r.fecha_vencimiento }));
+    groups.forEach(group => {
+      group.items.sort((a, b) => String(a.r.fecha_vencimiento).localeCompare(String(b.r.fecha_vencimiento)));
+      combined.push({ kind: 'group', group, fecha: group.items[0].r.fecha_vencimiento });
+    });
+    combined.sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
+
+    combined.forEach(entry => {
+      if (entry.kind === 'row') {
+        tbody.appendChild(buildObligacionRow(entry.item.r, entry.item.variable));
+      } else {
+        tbody.appendChild(buildTarjetaGroupHeader(entry.group));
+        entry.group.items.forEach(item => {
+          const tr = buildObligacionRow(item.r, item.variable);
+          tr.classList.add('obl-group-row');
+          tr.dataset.groupId = entry.group.id;
+          tr.style.display = 'none';
+          tbody.appendChild(tr);
+        });
+      }
     });
     bindPayButtons(tbody);
   }
@@ -159,6 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const { desde, hasta } = monthRange();
     const res = await fetch(`/api/planning/agenda?desde=${desde}&hasta=${hasta}&usuario_id=${usuarioId()}`);
     const rows = res.ok ? await res.json() : [];
+    agendaRowsCache = rows;
     const fijos = rows.filter(r => !esMontoVariable(r));
     const variables = rows.filter(esMontoVariable);
     const comprometido = rows.filter(r => r.estado !== 'pagado' && r.estado !== 'cancelado').reduce((s, r) => s + (Number(r.importe_esperado) || 0), 0);
@@ -201,6 +352,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const cmTarjeta = document.getElementById('cmTarjeta');
   const cmFreqEl = document.getElementById('cmFreq');
   const cmDiaEl = document.getElementById('cmDia');
+  const cmVariableWrap = document.getElementById('cmVariableWrap');
+  const cmCuentaWrap = document.getElementById('cmCuentaWrap');
+  const cmCuentaEl = document.getElementById('cmCuenta');
+
+  function updateCuentaVisibility() {
+    if (!cmCuentaWrap || !cmKind) return;
+    const isCompra = cmKind.value === 'compra_cuotas' || cmKind.value === 'compra_unica';
+    const tieneTarjeta = isCompra && cmTarjeta && cmTarjeta.value;
+    cmCuentaWrap.style.display = tieneTarjeta ? 'none' : '';
+    if (cmCuentaEl) {
+      if (tieneTarjeta) cmCuentaEl.removeAttribute('required');
+    }
+  }
 
   function updateCuotaInfo() {
     if (!cmMonto || !cmCuotas || !cmImportePorCuota) return;
@@ -217,21 +381,26 @@ document.addEventListener('DOMContentLoaded', () => {
         cmCuotasWrap.style.display = '';
         cmFreqEl.style.display = 'none';
         cmDiaEl.style.display = 'none';
+        if (cmVariableWrap) cmVariableWrap.style.display = 'none';
       } else if (kind === 'compra_unica') {
         cmCuotasWrap.style.display = '';
         cmCuotas.value = 1;
         cmFreqEl.style.display = 'none';
         cmDiaEl.style.display = 'none';
+        if (cmVariableWrap) cmVariableWrap.style.display = 'none';
       } else { // gasto_fijo
         cmCuotasWrap.style.display = 'none';
         cmCuotas.value = '';
         cmFreqEl.style.display = '';
         cmDiaEl.style.display = '';
+        if (cmVariableWrap) cmVariableWrap.style.display = '';
       }
       updateCuotaInfo();
+      updateCuentaVisibility();
     });
   }
 
+  if (cmTarjeta) cmTarjeta.addEventListener('change', updateCuentaVisibility);
   if (cmMonto) cmMonto.addEventListener('input', updateCuotaInfo);
   if (cmCuotas) cmCuotas.addEventListener('input', updateCuotaInfo);
   // llenar selects cuando se abre el modal
@@ -241,6 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
       fillAccountSelects();
       fillTarjetaSelects();
       if (cmKind) cmKind.dispatchEvent(new Event('change'));
+      updateCuentaVisibility();
     });
   }
   const agendaPrevBtn = document.getElementById('agendaPrevMonth');
@@ -262,11 +432,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const agendaMonthLabelEl = document.getElementById('agendaMonthLabel');
   if (agendaMonthLabelEl) {
     agendaMonthLabelEl.style.cursor = 'pointer';
-    agendaMonthLabelEl.title = 'Volver al mes actual';
+    agendaMonthLabelEl.title = 'Volver al mes siguiente';
     agendaMonthLabelEl.addEventListener('click', () => {
-      const now = new Date();
-      viewYear = now.getFullYear();
-      viewMonth = now.getMonth() + 1;
+      setViewToNextMonth();
       syncAndLoadAgenda();
     });
   }
@@ -311,10 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (res.ok) {
           bootstrap.Modal.getOrCreateInstance(document.getElementById('commitmentModal')).hide();
           document.getElementById('commitmentForm').reset();
-          const now = new Date();
-          viewYear = now.getFullYear();
-          viewMonth = now.getMonth() + 1;
-          shiftViewMonth(1);
+          setViewToNextMonth();
           await loadAgenda();
           if (window.KF && KF.emit) KF.emit('kf:obligaciones-changed');
         } else {
@@ -328,7 +493,8 @@ document.addEventListener('DOMContentLoaded', () => {
           frecuencia: document.getElementById('cmFreq').value,
           dia_vencimiento: Number(document.getElementById('cmDia').value) || null,
           importe_estimado: Number(document.getElementById('cmMonto').value),
-          cuenta_sugerida_id: cuentaId
+          cuenta_sugerida_id: cuentaId,
+          es_variable: (() => { const el = document.querySelector('input[name="cmVariable"]:checked'); return el ? Number(el.value) : 0; })()
         };
         const res = await fetch('/api/planning/compromisos', {
           method: 'POST',
@@ -369,6 +535,59 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       } else {
         alert('Error al confirmar pago');
+      }
+    });
+  }
+
+  const editObligacionForm = document.getElementById('editObligacionForm');
+  if (editObligacionForm) {
+    editObligacionForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('eoId').value;
+      const eoTipoWrapVisible = document.getElementById('eoTipoWrap').style.display !== 'none';
+      const eoVariableRadio = document.querySelector('input[name="eoVariable"]:checked');
+      const eoEstadoEl = document.getElementById('eoEstado');
+      const payload = {
+        descripcion: document.getElementById('eoDesc').value,
+        fecha_vencimiento: document.getElementById('eoFecha').value,
+        importe_esperado: Number(document.getElementById('eoMonto').value),
+        cuenta_pago_id: Number(document.getElementById('eoCuenta').value) || null,
+        estado: eoEstadoEl.disabled ? eoEstadoEl.dataset.actualEstado : eoEstadoEl.value
+      };
+      if (eoTipoWrapVisible) {
+        payload.tipo = document.getElementById('eoTipo').value;
+        payload.es_variable = eoVariableRadio ? Number(eoVariableRadio.value) : 0;
+      }
+      const res = await fetch(`/api/planning/instancias/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        bootstrap.Modal.getInstance(document.getElementById('editObligacionModal')).hide();
+        await syncAndLoadAgenda();
+        if (window.KF && KF.emit) KF.emit('kf:obligaciones-changed');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Error al actualizar la obligación');
+      }
+    });
+  }
+
+  const eoDeleteBtn = document.getElementById('eoDeleteBtn');
+  if (eoDeleteBtn) {
+    eoDeleteBtn.addEventListener('click', async () => {
+      const id = document.getElementById('eoId').value;
+      if (!id) return;
+      if (!confirm('¿Eliminar esta obligación? Esta acción no se puede deshacer.')) return;
+      const res = await fetch(`/api/planning/instancias/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        bootstrap.Modal.getInstance(document.getElementById('editObligacionModal')).hide();
+        await syncAndLoadAgenda();
+        if (window.KF && KF.emit) KF.emit('kf:obligaciones-changed');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Error al eliminar la obligación');
       }
     });
   }

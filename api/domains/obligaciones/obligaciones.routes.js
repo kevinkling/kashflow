@@ -9,8 +9,8 @@ function handle(err, res, fallback) {
 
 router.post('/compromisos', async (req, res) => {
   try {
-    const { usuario_id, nombre, tipo, frecuencia, dia_vencimiento, importe_estimado, cuenta_sugerida_id } = req.body;
-    const id = await service.crearCompromiso(usuario_id, nombre, tipo, frecuencia, dia_vencimiento, importe_estimado, cuenta_sugerida_id);
+    const { usuario_id, nombre, tipo, frecuencia, dia_vencimiento, importe_estimado, cuenta_sugerida_id, es_variable } = req.body;
+    const id = await service.crearCompromiso(usuario_id, nombre, tipo, frecuencia, dia_vencimiento, importe_estimado, cuenta_sugerida_id, es_variable);
     res.status(201).json({ id });
   } catch (err) {
     handle(err, res, 'Error creando compromiso');
@@ -59,6 +59,25 @@ router.get('/instancias', async (req, res) => {
     res.json(await service.obtenerInstanciasPorPeriodo(desde, hasta, usuario_id));
   } catch (err) {
     handle(err, res, 'Error obteniendo instancias');
+  }
+});
+
+router.put('/instancias/:id', async (req, res) => {
+  try {
+    const { descripcion, fecha_vencimiento, importe_esperado, cuenta_pago_id, estado, tipo, es_variable } = req.body;
+    const instancia = await service.actualizarInstancia(req.params.id, { descripcion, fecha_vencimiento, importe_esperado, cuenta_pago_id, estado, tipo, es_variable });
+    res.json(instancia);
+  } catch (err) {
+    handle(err, res, 'Error actualizando obligación');
+  }
+});
+
+router.delete('/instancias/:id', async (req, res) => {
+  try {
+    await service.eliminarInstancia(req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    handle(err, res, 'Error eliminando obligación');
   }
 });
 

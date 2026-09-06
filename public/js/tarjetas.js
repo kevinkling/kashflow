@@ -175,6 +175,10 @@ document.addEventListener('DOMContentLoaded', () => {
       fillCardCuentaSelect();
       loadTarjetas();
     });
+    KF.on('kf:usuario-changed', () => {
+      fillCardCuentaSelect();
+      loadTarjetas();
+    });
   }
 
   const cardForm = document.getElementById('cardForm');

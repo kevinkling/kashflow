@@ -353,6 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
     KF.on('kf:view-changed', (e) => {
       if (e.detail && e.detail.view === 'simulador') openSimulator();
     });
+    KF.on('kf:usuario-changed', () => { openSimulator(); });
   }
 
   if (createBtn) {

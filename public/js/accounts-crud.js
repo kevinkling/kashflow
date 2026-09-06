@@ -316,6 +316,10 @@ function initializeAccountsCRUDListeners() {
                 loadAllUsers();
             }
         });
+        KF.on('kf:usuario-changed', () => {
+            loadAllAccounts();
+            loadAllUsers();
+        });
     }
 
     const newAccountBtn = document.getElementById('newAccountBtn');

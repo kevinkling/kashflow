@@ -18,6 +18,24 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="KashFlow">
+    <!-- Inline theme preflight: aplica el tema guardado antes de cargar CSS para evitar flash -->
+    <script>
+      (function() {
+        try {
+          var t = localStorage.getItem('kf:theme') || 'dark';
+          document.documentElement.setAttribute('data-theme', t);
+          document.documentElement.setAttribute('data-particles', localStorage.getItem('kf:particles') || 'on');
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) {
+            meta.setAttribute('content', t === 'dark' ? '#09090b' : '#f4f4f5');
+          }
+          var fav32 = document.querySelector('link[rel="icon"][sizes="32x32"]');
+          if (fav32) fav32.setAttribute('href', t === 'dark' ? 'icons/favicon-32.png' : 'icons/favicon-32-light.png');
+          var fav192 = document.querySelector('link[rel="icon"][sizes="192x192"]');
+          if (fav192) fav192.setAttribute('href', t === 'dark' ? 'icons/icon-192.png' : 'icons/icon-192-light.png');
+        } catch (e) {}
+      })();
+    </script>
     <link rel="stylesheet" href="./css/journal.css" />
     <style>
       /* Fix para que el modal de confirmación aparezca sobre el de gestión */
@@ -33,8 +51,10 @@
     <header class="container-fluid py-1 bg-dark bg-opacity-75">
       <div class="kf-bar">
         <h1 class="kf-bar__mark">
-          <img src="icons/icon-192.png" alt="">
-          KashFlow
+          <button type="button" id="brand-home" class="kf-bar__mark-btn" title="Ir a Inicio" aria-label="Ir a Inicio">
+            <img id="brand-mark" src="icons/icon-mark.png" alt="">
+            KashFlow
+          </button>
         </h1>
         <div class="kf-bar__tools">
           <button type="button" id="inicio-button" class="kf-bar__tab is-on" title="Inicio - ¿Cómo estoy?"><i class="bi bi-speedometer2"></i><span class="kf-bar__label">Inicio</span></button>
@@ -42,7 +62,30 @@
           <button type="button" id="obligaciones-button" class="kf-bar__tab" title="Obligaciones"><i class="bi bi-receipt"></i><span class="kf-bar__label">Obligaciones</span></button>
           <button type="button" id="simulador-button" class="kf-bar__tab" title="Simulador"><i class="bi bi-calculator"></i><span class="kf-bar__label">Simulador</span></button>
           <button type="button" id="cuentas-button" class="kf-bar__tab" title="Cuentas y tarjetas"><i class="bi bi-bank"></i><span class="kf-bar__label">Cuentas</span></button>
-          <button type="button" id="refresh-button" class="kf-bar__icon" title="Actualizar" aria-label="Actualizar"><i class="bi bi-arrow-clockwise"></i></button>
+          <!-- Settings dropdown (replaces refresh button) -->
+          <div class="dropdown kf-settings">
+            <button type="button" id="settings-button" class="kf-bar__icon" title="Configuración" aria-label="Configuración" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+              <i class="bi bi-gear"></i>
+            </button>
+            <div class="dropdown-menu dropdown-menu-end kf-settings__menu" aria-labelledby="settings-button">
+              <div class="kf-settings__row px-3 py-2">
+                <label class="kf-settings__label" for="settings-usuario">Usuario</label>
+                <select id="settings-usuario" class="form-select form-select-sm kf-settings__select" aria-label="Usuario activo"></select>
+              </div>
+              <div class="kf-settings__row px-3 py-2">
+                <span>Modo nocturno</span>
+                <div class="form-check form-switch m-0">
+                  <input class="form-check-input" type="checkbox" role="switch" id="theme-toggle" aria-label="Alternar modo nocturno">
+                </div>
+              </div>
+              <div class="kf-settings__row px-3 py-2">
+                <span>Fondo animado</span>
+                <div class="form-check form-switch m-0">
+                  <input class="form-check-input" type="checkbox" role="switch" id="particles-toggle" aria-label="Mostrar fondo animado">
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </header>
@@ -901,6 +944,7 @@
     <script src="js/utils.js"></script>
     <script src="js/core/bus.js"></script>
     <script src="js/core/store.js"></script>
+    <script src="js/core/theme.js"></script>
     <script src="js/core/nav.js"></script>
     <script src="js/accounts.js"></script>
     <script src="js/accounts-crud.js"></script>

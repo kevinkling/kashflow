@@ -37,6 +37,13 @@ KF.nav = (function () {
         show(key);
       });
     });
+    const brand = document.getElementById('brand-home');
+    if (brand) {
+      brand.addEventListener('click', (e) => {
+        e.preventDefault();
+        show('inicio');
+      });
+    }
   });
 
   return { show };

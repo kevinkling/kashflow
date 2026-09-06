@@ -245,7 +245,7 @@ function updateIndicators() {
     // Actualizar indicadores principales
     const totalBalanceEl = document.getElementById('totalBalance');
     totalBalanceEl.textContent = formatCurrency(totalBalance);
-    totalBalanceEl.className = `mb-0 fw-bold ${totalBalance >= 0 ? 'text-white' : 'text-warning'}`;
+    totalBalanceEl.classList.toggle('is-neg', totalBalance < 0);
 
     document.getElementById('monthlyIncome').textContent = formatCurrency(monthlyIncome);
     document.getElementById('monthlyExpenses').textContent = formatCurrency(monthlyExpenses);
@@ -530,13 +530,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // Cargar datos iniciales
     loadTransactions();
 
-    // Inicializar partículas
-    if (typeof particlesJS !== 'undefined') {
-        particlesJS.load('particles-js', 'js/particles/particlesjs-config.json');
-    }
-
     // Event listeners
-    document.getElementById('refresh-button').addEventListener('click', loadTransactions);
+    // (refresh button removed — la recarga se gestiona por otros eventos)
 
     // Filtros
     document.getElementById('dateFrom').addEventListener('change', () => {
@@ -796,6 +791,12 @@ if (window.KF && KF.on) {
         try { loadTransactions(); } catch (e) { console.error(e); }
     });
     KF.on('kf:cuentas-changed', () => {
+        try {
+            loadTransactions();
+            if (typeof fillQuickMoveSelects === 'function') fillQuickMoveSelects();
+        } catch (e) { console.error(e); }
+    });
+    KF.on('kf:usuario-changed', () => {
         try {
             loadTransactions();
             if (typeof fillQuickMoveSelects === 'function') fillQuickMoveSelects();

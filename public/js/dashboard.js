@@ -92,7 +92,11 @@ async function loadDashboard() {
     const data = await res.json();
     const set = (id, value) => {
       const el = document.getElementById(id);
-      if (el) el.textContent = formatCurrency(value);
+      if (!el) return;
+      el.textContent = formatCurrency(value);
+      const n = Number(value) || 0;
+      el.classList.toggle('amount-negative', n < 0);
+      el.classList.toggle('amount-positive', n > 0);
     };
     set('dashboardDisponible', data.disponibleReal || 0);
     set('dashboardIngresos', data.ingresosPeriodo || 0);
@@ -119,11 +123,11 @@ async function loadDashboard() {
       catEl.innerHTML = '';
       const cats = data.gastosPorCategoria || [];
       if (!cats.length) {
-        catEl.innerHTML = '<li class="list-group-item bg-dark text-white-50">Sin gastos categorizados este mes</li>';
+        catEl.innerHTML = '<li class="list-group-item text-white-50">Sin gastos categorizados este mes</li>';
       } else {
         cats.forEach(c => {
           const li = document.createElement('li');
-          li.className = 'list-group-item bg-dark text-white d-flex justify-content-between align-items-center';
+          li.className = 'list-group-item d-flex justify-content-between align-items-center';
           li.innerHTML = `<div>${c.categoria}</div><div>${formatCurrency(c.total || 0)}</div>`;
           catEl.appendChild(li);
         });
@@ -142,4 +146,5 @@ if (window.KF && KF.on) {
   KF.on('kf:movimientos-changed', loadDashboard);
   KF.on('kf:obligaciones-changed', loadDashboard);
   KF.on('kf:cuentas-changed', loadDashboard);
+  KF.on('kf:usuario-changed', loadDashboard);
 }

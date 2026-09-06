@@ -41,24 +41,12 @@ async function renderTopAccounts() {
 
             topAccountsContainer.appendChild(col);
 
-            // Agregar event listener para el click
             const card = col.querySelector('.account-card');
             card.addEventListener('click', function () {
                 const accountId = this.getAttribute('data-account-id');
                 if (typeof filterByAccount === 'function') {
                     filterByAccount(accountId);
                 }
-            });
-
-            // Efecto hover
-            card.addEventListener('mouseenter', function () {
-                this.style.transform = 'translateY(-5px)';
-                this.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.4)';
-            });
-
-            card.addEventListener('mouseleave', function () {
-                this.style.transform = 'translateY(0)';
-                this.style.boxShadow = 'none';
             });
         });
     } catch (error) {

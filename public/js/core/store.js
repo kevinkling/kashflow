@@ -2,6 +2,7 @@ window.KF = window.KF || {};
 KF.store = (function () {
   let usuarioId = 1;
   let accounts = [];
+  let users = [];
   let readyPromise = null;
 
   function fillSelect(el, extraOption) {
@@ -23,7 +24,7 @@ KF.store = (function () {
   async function refreshUsers() {
     try {
       const res = await fetch('/api/cuentas/usuarios');
-      const users = res.ok ? await res.json() : [];
+      users = res.ok ? await res.json() : [];
       const saved = savedUsuarioId();
       if (saved && users.some(u => Number(u.id) === saved)) {
         usuarioId = saved;
@@ -33,6 +34,7 @@ KF.store = (function () {
       }
     } catch (err) {
       console.error('Error cargando usuarios', err);
+      users = [];
     }
     return usuarioId;
   }
@@ -45,6 +47,16 @@ KF.store = (function () {
       console.error('Error refreshing accounts', err);
     }
     return accounts;
+  }
+
+  async function setUsuario(id) {
+    const next = Number(id);
+    if (!next || next === usuarioId) return usuarioId;
+    usuarioId = next;
+    persistUsuario(usuarioId);
+    await refreshAccounts();
+    if (window.KF && KF.emit) KF.emit('kf:usuario-changed', { usuarioId });
+    return usuarioId;
   }
 
   function init() {
@@ -62,10 +74,12 @@ KF.store = (function () {
 
   return {
     getUsuarioId() { return usuarioId; },
+    getUsers() { return users; },
     getAccounts() { return accounts; },
     fillSelect,
     refreshAccounts,
     refreshUsers,
+    setUsuario,
     init
   };
 })();

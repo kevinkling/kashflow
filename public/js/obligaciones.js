@@ -341,6 +341,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
     KF.on('kf:cuentas-changed', fillAccountSelects);
+    KF.on('kf:usuario-changed', () => {
+      fillAccountSelects();
+      fillTarjetaSelects();
+      syncAndLoadAgenda();
+    });
   }
 
   // Control del modal: mostrar/ocultar campos según tipo de compromiso (gasto fijo / compra)

@@ -95,19 +95,13 @@ async function actualizarTarjeta(tarjetaId, datos) {
   return repo.obtenerTarjetaPorId(tarjetaId);
 }
 
-async function eliminarTarjeta(tarjetaId) {
+async function archivarTarjeta(tarjetaId) {
   const tarjeta = await repo.obtenerTarjetaPorId(tarjetaId);
   if (!tarjeta) throw new Error('Tarjeta no encontrada');
-  try {
-    const ok = await repo.eliminarTarjeta(tarjetaId);
-    if (!ok) throw new Error('No se pudo eliminar la tarjeta');
-    return true;
-  } catch (err) {
-    if (/FOREIGN KEY/i.test(err.message)) {
-      throw new Error('No se puede eliminar: la tarjeta tiene compromisos u obligaciones asociadas.');
-    }
-    throw err;
-  }
+  if (!tarjeta.activa) throw new Error('La tarjeta ya está archivada');
+  const ok = await repo.archivarTarjeta(tarjetaId);
+  if (!ok) throw new Error('No se pudo archivar la tarjeta');
+  return true;
 }
 
 module.exports = {
@@ -118,5 +112,5 @@ module.exports = {
   generarResumenTarjeta,
   obtenerResumenTarjetaActual,
   actualizarTarjeta,
-  eliminarTarjeta
+  archivarTarjeta
 };

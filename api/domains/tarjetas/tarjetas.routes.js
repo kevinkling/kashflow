@@ -37,10 +37,10 @@ router.put('/tarjetas/:id', async (req, res) => {
 
 router.delete('/tarjetas/:id', async (req, res) => {
   try {
-    await service.eliminarTarjeta(req.params.id);
+    await service.archivarTarjeta(req.params.id);
     res.json({ ok: true });
   } catch (err) {
-    handle(err, res, 'Error eliminando tarjeta');
+    handle(err, res, 'Error archivando tarjeta');
   }
 });
 

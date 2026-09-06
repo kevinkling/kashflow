@@ -66,3 +66,64 @@ test('sincronizar-mes es idempotente y no duplica resúmenes por período', asyn
   }
 });
 
+test('archivar tarjeta la oculta y deja de generar resúmenes nuevos', async () => {
+  const alias = `ARCH_${Date.now()}`;
+  let tarjetaId;
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const next = new Date(year, month, 1);
+  const nextYear = next.getFullYear();
+  const nextMonth = next.getMonth() + 1;
+  const periodoActual = periodoYYYYMM(year, month);
+  const periodoSiguiente = periodoYYYYMM(nextYear, nextMonth);
+  try {
+    tarjetaId = await tarjetasRepo.crearTarjeta(1, `Tarjeta Archivo ${alias}`, alias, 1, 10, null);
+    await obligacionesService.sincronizarMes(1, year, month);
+    await tarjetasRepo.archivarTarjeta(tarjetaId);
+
+    const list = await tarjetasRepo.obtenerTarjetasUsuario(1);
+    assert.equal(list.some(t => Number(t.id) === Number(tarjetaId)), false);
+
+    await obligacionesService.sincronizarMes(1, nextYear, nextMonth);
+    const r = await pool.query(
+      'SELECT COUNT(*) AS c FROM resumenes_tarjeta WHERE tarjeta_id = ? AND periodo = ?',
+      [tarjetaId, periodoSiguiente]
+    );
+    assert.equal(Number(r.rows[0].c || 0), 0);
+    const prev = await pool.query(
+      'SELECT COUNT(*) AS c FROM resumenes_tarjeta WHERE tarjeta_id = ? AND periodo = ?',
+      [tarjetaId, periodoActual]
+    );
+    assert.equal(Number(prev.rows[0].c || 0), 1);
+  } finally {
+    if (tarjetaId) {
+      await pool.query('DELETE FROM instancias_compromiso WHERE tarjeta_id = ?', [tarjetaId]);
+      await pool.query('DELETE FROM resumenes_tarjeta WHERE tarjeta_id = ?', [tarjetaId]);
+      await pool.query('DELETE FROM tarjetas WHERE id = ?', [tarjetaId]);
+    }
+  }
+});
+
+test('sincronizar-mes elimina instancias de tarjetas inexistentes', async () => {
+  const obligacionesRepo = require('../api/domains/obligaciones/obligaciones.repository');
+  let instanciaId;
+  try {
+    const insert = await pool.query(
+      `INSERT INTO instancias_compromiso
+        (compromiso_id, usuario_id, descripcion, periodo, fecha_vencimiento, importe_esperado, tarjeta_id, estado)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'pagado')`,
+      [null, 1, 'Resumen Tarjeta Test TEST_huerfana', '2026-09', '2026-09-10', 1, 999999]
+    );
+    instanciaId = insert.lastInsertRowid;
+    const n = await obligacionesRepo.eliminarInstanciasTarjetasInexistentes();
+    assert(n >= 1);
+    const leftover = await pool.query('SELECT id FROM instancias_compromiso WHERE id = ?', [instanciaId]);
+    assert.equal(leftover.rows.length, 0);
+  } finally {
+    if (instanciaId) {
+      await pool.query('DELETE FROM instancias_compromiso WHERE id = ?', [instanciaId]);
+    }
+  }
+});
+

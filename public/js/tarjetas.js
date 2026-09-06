@@ -47,8 +47,8 @@ function renderMaestro(tarjetas) {
         <button type="button" class="btn btn-sm btn-outline-primary me-1" data-edit-tarjeta="${t.id}" title="Editar">
           <i class="bi bi-pencil"></i>
         </button>
-        <button type="button" class="btn btn-sm btn-outline-danger" data-delete-tarjeta="${t.id}" title="Eliminar">
-          <i class="bi bi-trash"></i>
+        <button type="button" class="btn btn-sm btn-outline-danger" data-delete-tarjeta="${t.id}" title="Archivar">
+          <i class="bi bi-archive"></i>
         </button>
       </td>
     </tr>`).join('');
@@ -94,13 +94,13 @@ function resetCardForm() {
 async function deleteTarjeta(id) {
   const t = tarjetasCache.find(x => Number(x.id) === id);
   const nombre = t ? t.nombre : `#${id}`;
-  if (!confirm(`¿Eliminar la tarjeta "${nombre}"? Se eliminarán también sus consumos y resúmenes asociados.`)) return;
+  if (!confirm(`¿Archivar la tarjeta "${nombre}"?\n\nDejará de aparecer y no se generarán resúmenes nuevos. El historial de obligaciones y pagos se conserva.`)) return;
   const res = await fetch(`/api/planning/tarjetas/${id}`, { method: 'DELETE' });
   if (res.ok) {
     if (window.KF && KF.emit) KF.emit('kf:tarjetas-changed');
   } else {
     const data = await res.json().catch(() => ({}));
-    alert(data.error || 'Error al eliminar la tarjeta');
+    alert(data.error || 'Error al archivar la tarjeta');
   }
 }
 

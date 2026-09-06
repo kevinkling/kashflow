@@ -11,7 +11,7 @@ async function crearTarjeta(usuarioId, nombre, alias, diaCierre, diaVencimiento,
 
 async function obtenerTarjetasUsuario(usuarioId) {
   const result = await pool.query(
-    `SELECT * FROM tarjetas WHERE usuario_id = ? ORDER BY nombre`,
+    `SELECT * FROM tarjetas WHERE usuario_id = ? AND activa = 1 ORDER BY nombre`,
     [usuarioId]
   );
   return result.rows;
@@ -36,8 +36,11 @@ async function actualizarTarjeta(tarjetaId, { nombre, alias, dia_cierre, dia_ven
   return result.rowCount > 0;
 }
 
-async function eliminarTarjeta(tarjetaId) {
-  const result = await pool.query('DELETE FROM tarjetas WHERE id = ?', [tarjetaId]);
+async function archivarTarjeta(tarjetaId) {
+  const result = await pool.query(
+    `UPDATE tarjetas SET activa = 0, fecha_modificacion = datetime('now','localtime') WHERE id = ? AND activa = 1`,
+    [tarjetaId]
+  );
   return result.rowCount > 0;
 }
 
@@ -157,7 +160,7 @@ module.exports = {
   obtenerTarjetasUsuario,
   obtenerTarjetaPorId,
   actualizarTarjeta,
-  eliminarTarjeta,
+  archivarTarjeta,
   insertarConsumo,
   insertarCuotas,
   obtenerConsumosTarjeta,

@@ -122,6 +122,7 @@ async function sincronizarMes(usuario_id, year, month) {
   const now = new Date();
   const y = year || now.getFullYear();
   const m = month || (now.getMonth() + 1);
+  const instanciasHuerfanasEliminadas = await repo.eliminarInstanciasTarjetasInexistentes();
   // Generar instancias recurrentes
   const creadas = await generarInstanciasDelPeriodo(usuario_id, y, m);
   // Generar resúmenes de tarjetas si no existen para el período
@@ -138,7 +139,11 @@ async function sincronizarMes(usuario_id, year, month) {
       console.warn(`Error generando resumen para tarjeta ${t.id}:`, err.message);
     }
   }
-  return { instancias_creadas: creadas, resumenes_generados: resGenerados };
+  return {
+    instancias_creadas: creadas,
+    resumenes_generados: resGenerados,
+    instancias_huerfanas_eliminadas: instanciasHuerfanasEliminadas
+  };
 }
 
 module.exports = {

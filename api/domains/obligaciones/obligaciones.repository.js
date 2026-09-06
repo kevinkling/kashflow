@@ -132,6 +132,25 @@ async function eliminarInstancia(instanciaId) {
   return result.rowCount > 0;
 }
 
+async function eliminarInstanciasTarjetasInexistentes() {
+  const result = await pool.query(
+    `DELETE FROM instancias_compromiso
+     WHERE compromiso_id IS NULL
+       AND descripcion LIKE 'Resumen %'
+       AND (
+         (tarjeta_id IS NOT NULL AND tarjeta_id NOT IN (SELECT id FROM tarjetas))
+         OR (
+           tarjeta_id IS NULL
+           AND NOT EXISTS (
+             SELECT 1 FROM tarjetas t
+             WHERE instancias_compromiso.descripcion LIKE 'Resumen ' || t.nombre || ' %'
+           )
+         )
+       )`
+  );
+  return result.rowCount || 0;
+}
+
 async function existeInstanciaEnPeriodo(compromisoId, periodo) {
   const existing = await pool.query(
     `SELECT id FROM instancias_compromiso WHERE compromiso_id = ? AND periodo = ?`,
@@ -161,6 +180,7 @@ module.exports = {
   obtenerInstanciaPorId,
   actualizarInstancia,
   eliminarInstancia,
+  eliminarInstanciasTarjetasInexistentes,
   obtenerCompromisoPorId,
   actualizarCompromisoTipoYVariable
 };

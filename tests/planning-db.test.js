@@ -56,3 +56,57 @@ test('generación de instancias es idempotente por compromiso y período', () =>
   assert.throws(() => insert.run());
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM instancias_compromiso').get().n, 1);
 });
+
+test('archivar tarjeta la oculta del listado y conserva sus instancias', () => {
+  const db = new Database(':memory:');
+  db.pragma('foreign_keys = ON');
+  applySqlFile(db, path.join(__dirname, '../data/schema.sql'));
+  applySqlFile(db, path.join(__dirname, '../data/updates/006_add_financial_planning_tables.sql'));
+  applySqlFile(db, path.join(__dirname, '../data/updates/011_resumenes_tarjeta_y_cuotas.sql'));
+
+  db.prepare('INSERT INTO usuarios (telegram_user_id, nombre) VALUES (?, ?)').run(1, 'Test');
+  db.prepare("INSERT INTO tarjetas (usuario_id, nombre, alias, dia_cierre, dia_vencimiento) VALUES (1, 'Visa', 'visa', 10, 20)").run();
+  db.prepare("INSERT INTO instancias_compromiso (usuario_id, descripcion, periodo, fecha_vencimiento, importe_esperado, estado, tarjeta_id) VALUES (1, 'Resumen Visa 2026-08', '2026-08', '2026-08-20', 1000, 'pendiente', 1)").run();
+
+  const archived = db.prepare("UPDATE tarjetas SET activa = 0 WHERE id = 1 AND activa = 1").run();
+  assert.equal(archived.changes, 1);
+  const activas = db.prepare('SELECT * FROM tarjetas WHERE usuario_id = 1 AND activa = 1').all();
+  assert.equal(activas.length, 0);
+  const instancias = db.prepare('SELECT * FROM instancias_compromiso WHERE tarjeta_id = 1').all();
+  assert.equal(instancias.length, 1);
+});
+
+test('se eliminan resúmenes de tarjetas inexistentes y se conservan los de tarjetas vigentes', () => {
+  const db = new Database(':memory:');
+  db.pragma('foreign_keys = ON');
+  applySqlFile(db, path.join(__dirname, '../data/schema.sql'));
+  applySqlFile(db, path.join(__dirname, '../data/updates/006_add_financial_planning_tables.sql'));
+  applySqlFile(db, path.join(__dirname, '../data/updates/011_resumenes_tarjeta_y_cuotas.sql'));
+
+  db.prepare('INSERT INTO usuarios (telegram_user_id, nombre) VALUES (?, ?)').run(1, 'Test');
+  db.prepare("INSERT INTO tarjetas (usuario_id, nombre, alias, dia_cierre, dia_vencimiento) VALUES (1, 'Visa', 'visa', 10, 20)").run();
+  db.prepare("INSERT INTO instancias_compromiso (usuario_id, descripcion, periodo, fecha_vencimiento, importe_esperado, estado, tarjeta_id) VALUES (1, 'Resumen Visa', '2026-08', '2026-08-20', 1000, 'pendiente', 1)").run();
+  db.prepare("INSERT INTO instancias_compromiso (usuario_id, descripcion, periodo, fecha_vencimiento, importe_esperado, estado, tarjeta_id) VALUES (1, 'Resumen Tarjeta Test TEST_huerfano', '2026-08', '2026-08-20', 50, 'pagado', 999)").run();
+  db.prepare("INSERT INTO instancias_compromiso (usuario_id, descripcion, periodo, fecha_vencimiento, importe_esperado, estado) VALUES (1, 'Resumen Tarjeta Test 2026-08', '2026-08', '2026-08-20', 0, 'pendiente')").run();
+  db.prepare("INSERT INTO instancias_compromiso (usuario_id, descripcion, periodo, fecha_vencimiento, importe_esperado, estado) VALUES (1, 'Alquiler', '2026-08', '2026-08-05', 400, 'pendiente')").run();
+
+  const deleted = db.prepare(`
+    DELETE FROM instancias_compromiso
+    WHERE compromiso_id IS NULL
+      AND descripcion LIKE 'Resumen %'
+      AND (
+        (tarjeta_id IS NOT NULL AND tarjeta_id NOT IN (SELECT id FROM tarjetas))
+        OR (
+          tarjeta_id IS NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM tarjetas t
+            WHERE instancias_compromiso.descripcion LIKE 'Resumen ' || t.nombre || ' %'
+          )
+        )
+      )
+  `).run();
+  assert.equal(deleted.changes, 2);
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM instancias_compromiso WHERE descripcion = 'Resumen Visa'").get().n, 1);
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM instancias_compromiso WHERE descripcion = 'Alquiler'").get().n, 1);
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM instancias_compromiso WHERE descripcion LIKE 'Resumen Tarjeta Test%'").get().n, 0);
+});

@@ -10,7 +10,6 @@ services:
       - "3000:3000"
     volumes:
       - ./data:/app/data
-      - ./public:/app/public
       - ./api:/app/api
     env_file:
       - .env

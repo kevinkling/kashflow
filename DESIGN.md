@@ -1,241 +1,125 @@
 ---
-name: KashFlow
-description: Libro nocturno — diario financiero oscuro de vidrio, con violeta de lámpara.
+name: KashFlow v2
+description: Fintech minimalista plana, dark mode por defecto, un solo acento violeta y semántica contable verde/rojo/azul.
 colors:
-  tinta: "#09090b"
-  tinta-media: "#0f0f13"
-  pizarra: "#1c1c21"
-  encabezado: "#131316"
+  fondo: "#09090b"
+  superficie: "#18181b"
+  superficie-muted: "#131316"
   borde: "#27272a"
-  papel: "#f8fafc"
-  humo: "#a1a1aa"
-  ceniza: "#71717a"
-  tinta-violeta: "#8b5cf6"
-  tinta-violeta-hover: "#7c3aed"
+  texto: "#f8fafc"
+  texto-muted: "#a1a1aa"
+  texto-subtle: "#71717a"
+  primario: "#8b5cf6"
+  primario-hover: "#7c3aed"
   haber: "#10b981"
   debe: "#ef4444"
-  oro: "#f59e0b"
+  info: "#3b82f6"
+  info-hover: "#2563eb"
 typography:
   display:
     fontFamily: "Space Grotesk, system-ui, sans-serif"
-    fontSize: "2rem"
     fontWeight: 700
-    lineHeight: 1.15
-    letterSpacing: "-0.5px"
-  headline:
-    fontFamily: "Space Grotesk, system-ui, sans-serif"
-    fontSize: "1.25rem"
-    fontWeight: 700
-    lineHeight: 1.2
-    letterSpacing: "-0.5px"
-  title:
-    fontFamily: "Space Grotesk, system-ui, sans-serif"
-    fontSize: "1.5rem"
-    fontWeight: 700
-    lineHeight: 1.2
-    letterSpacing: "-0.5px"
   body:
     fontFamily: "DM Sans, system-ui, -apple-system, sans-serif"
-    fontSize: "1rem"
     fontWeight: 400
-    lineHeight: 1.5
-  label:
-    fontFamily: "DM Sans, system-ui, sans-serif"
-    fontSize: "0.85rem"
-    fontWeight: 600
-    lineHeight: 1.3
-    letterSpacing: "0.5px"
 rounded:
   sm: "4px"
   md: "6px"
   lg: "8px"
   xl: "16px"
-spacing:
-  sm: "8px"
-  md: "16px"
-  lg: "24px"
-  xl: "32px"
-components:
-  button-primary:
-    backgroundColor: "{colors.tinta-violeta}"
-    textColor: "{colors.papel}"
-    rounded: "{rounded.lg}"
-    padding: "0.6rem 1.2rem"
-    typography: "{typography.body}"
-  button-primary-hover:
-    backgroundColor: "{colors.tinta-violeta-hover}"
-    textColor: "{colors.papel}"
-    rounded: "{rounded.lg}"
-    padding: "0.6rem 1.2rem"
-  button-outline:
-    backgroundColor: "transparent"
-    textColor: "{colors.humo}"
-    rounded: "{rounded.lg}"
-    padding: "0.6rem 1.2rem"
-  input:
-    backgroundColor: "{colors.encabezado}"
-    textColor: "{colors.papel}"
-    rounded: "{rounded.lg}"
-    padding: "0.6rem 1rem"
-  card:
-    backgroundColor: "{colors.pizarra}"
-    textColor: "{colors.papel}"
-    rounded: "{rounded.xl}"
-    padding: "1.25rem 1.5rem"
-  chip:
-    backgroundColor: "{colors.tinta-violeta}"
-    textColor: "{colors.papel}"
-    rounded: "{rounded.md}"
-    padding: "0.5em 0.8em"
-    typography: "{typography.label}"
 ---
 
-# Design System: KashFlow
+# Design System: KashFlow v2
 
 ## Overview
 
-**Creative North Star: "El libro nocturno"**
-
-KashFlow se lee como un diario financiero a las 2 a.m.: zinc casi negro, paneles de vidrio, y una sola lámpara violeta sobre el escritorio. No es una landing fintech ni un spreadsheet de oficina. Es el libro de un operador, denso y tabular, donde el saldo tiene que ser creíble a primera vista.
-
-La superficie es translúcida (`backdrop-filter: blur(10px)` sobre tinta `#09090b`). Las cifras viven en Space Grotesk; el resto del sistema, en DM Sans. Haber y Debe no son decoración: son semántica contable. El glow violeta aparece en el CTA y en el KPI de saldo, no como wallpaper.
+Migración de la v1 ("El libro nocturno", vidrio + partículas + Bootstrap) a un sistema **plano**,
+construido con Vue 3 + Tailwind CSS + tokens en variables CSS (`src/assets/styles/main.css`
++ `tailwind.config.ts`). Se conserva el espíritu oscuro y denso del original —zinc casi negro, un solo
+acento violeta, semántica contable estricta— pero **sin** `backdrop-filter`, sin `particles.js` y sin
+Bootstrap.
 
 **Key Characteristics:**
 
-- Fondo tinta, cards de vidrio, borde de pelo blanco al 5%
-- Space Grotesk para títulos y montos; DM Sans para UI
-- Violeta de lámpara en un solo acento de acción
-- Haber verde / Debe rojo / Oro para obligaciones
-- Hover con lift de 1–4px y glow, no con sombras de producto SaaS
-- Particles.js es ruido legado, no doctrina
+- Fondo tinta (`#09090b`), superficies **planas** (sin blur ni translucidez), borde de 1px zinc.
+- Space Grotesk + `tabular-nums` para montos; DM Sans para el resto de la UI.
+- Violeta (`primary`) como único acento de marca/CTA.
+- Haber verde / Debe rojo / **Info azul** para Obligaciones (reemplaza el "oro" de la v1).
+- Sin partículas, sin vidrio: la jerarquía se logra con contraste tipográfico y color semántico, no con
+  efectos decorativos.
 
 ## Colors
 
-Paleta de libro: tinta, pizarra, una lámpara, y semántica de asiento.
+Los tokens viven como canales RGB separados por espacio en `:root` (`main.css`), para soportar el patrón
+`rgb(var(--token) / <alpha-value>)` de Tailwind y que las utilidades de opacidad (`bg-primary/10`, etc.)
+funcionen sobre variables.
 
-### Primary
+### Semánticos (no cambian entre tema claro/oscuro)
 
-- **Tinta violeta** (`tinta-violeta`): la lámpara. CTA primario, focus ring, KPI de saldo (gradiente 135° hacia `#6d28d9`), glow `rgba(139, 92, 246, 0.3)`.
-- **Tinta violeta hover** (`tinta-violeta-hover`): único oscurecimiento del CTA.
+- **`primary`** (`#8b5cf6` / hover `#7c3aed`): único acento de marca. CTA primario, focus ring, enlaces
+  activos de navegación. **The One Accent Rule**: no pinta fondos masivos ni iconografía decorativa.
+- **`haber`** (`#10b981`): ingresos, montos positivos, confirmaciones (botón "Confirmar pago").
+- **`debe`** (`#ef4444`): egresos, montos negativos, acciones destructivas (eliminar, desactivar).
+- **`info`** (`#3b82f6` / hover `#2563eb`): Obligaciones / vencimientos / badges informativos. Reemplaza
+  el "oro" de la v1.
 
-**The One Lamp Rule.** El violeta es la lámpara del escritorio. Va en el control que confirma y en el saldo total. No pinta fondos, tablas ni iconografía masiva.
+**The Haber/Debe/Info Rule.** Estos tres colores son semántica contable, no "estado de UI" genérico. Una
+transferencia interna nunca se pinta como Debe (es neutra).
 
-### Secondary
+### Superficies (dark, default — invertidas en `[data-theme='light']`)
 
-- **Haber** (`haber`): ingresos, botones de éxito, montos positivos. Gradiente de KPI 135° `#10b981` → `#059669`.
-- **Debe** (`debe`): egresos, peligro, montos negativos.
-- **Oro** (`oro`): Obligaciones / vencimientos. No es marca; es aviso de cuenta a pagar.
+- **`background`** (`#09090b`): canvas.
+- **`surface`** (`#18181b`): cards, modales, tabla.
+- **`surface-muted`** (`#131316`): encabezado de tabla, inputs, filas alternadas.
+- **`border`** (`#27272a`): líneas de 1px. Nunca `backdrop-filter` ni sombra de vidrio.
 
-**The Haber/Debe Rule.** Verde y rojo significan asiento, no “éxito de producto” ni alerta genérica. Una transferencia interna no se pinta como Debe.
+### Texto
 
-### Neutral
-
-- **Tinta** (`tinta`): canvas.
-- **Tinta media** (`tinta-media`): capa bajo el vidrio.
-- **Pizarra** (`pizarra`): card sólida / modal.
-- **Encabezado** (`encabezado`): header de tabla e inputs.
-- **Borde** (`borde`): líneas de 1px.
-- **Papel** (`papel`): texto primario.
-- **Humo** (`humo`): texto secundario, labels de tabla en mayúsculas.
-- **Ceniza** (`ceniza`): placeholders y muted.
-
-**The Hairline Rule.** Los bordes son `#27272a` o `rgba(255,255,255,0.05)`. Nunca un stroke Bootstrap default.
+- **`foreground`** (`#f8fafc`): texto primario.
+- **`muted`** (`#a1a1aa`): texto secundario, labels de tabla en mayúsculas.
+- **`subtle`** (`#71717a`): placeholders, empty states, metadata.
 
 ## Typography
 
-**Display Font:** Space Grotesk (system-ui, sans-serif)
-**Body Font:** DM Sans (system-ui, -apple-system, sans-serif)
+**Display Font:** Space Grotesk (`font-display` / clase utilitaria `font-money`)
+**Body Font:** DM Sans (default en `body`)
 
-**Character:** Grotesk geométrica para el dinero; Sans humanista para el resto. El contraste tipográfico es el lujo; no hay serif ni mono de marca.
-
-### Hierarchy
-
-- **Display** (700, 2rem / 1.5rem bajo 576px, tracking −0.5px): saldos de KPI.
-- **Headline** (700, 1.25rem, tracking −0.5px): nombres de cuenta destacados.
-- **Title** (700, ~1.5rem, tracking −0.5px): wordmark KashFlow en el header.
-- **Body** (400, 1rem): tabla, formularios, copy de UI.
-- **Label** (600, 0.85rem, tracking 0.5px, uppercase): encabezados de columna.
-
-**The Tabular Money Rule.** Los montos usan `font-variant-numeric: tabular-nums` y Grotesk o weight 600. Nunca un body proporcional para una columna de dinero.
-
-## Layout
-
-Bootstrap `container-lg` sobre un header full-bleed de vidrio (`blur(12px)`, borde inferior 1px). Ritmo de cards en filas: filtros, tres KPIs, top cuentas, libro diario. Padding de card ~1.25–1.5rem; celdas de tabla 1rem.
-
-Debajo de 768px: padding de contenedor 15px, botones y tabla a 0.9rem, título a 1.5rem. Debajo de 576px: KPIs a 1.5rem. La PWA se usa en teléfono tanto como en desktop; la densidad tabular se comprime, no se convierte en marketing.
-
-**The Report Grid Rule.** El dashboard es informe + carga, no un hero. Prioridad: header de secciones, KPIs, tabla. El espacio vacío es tinta, no un empty-state ilustrado.
-
-## Elevation & Depth
-
-Vidrio sobre tinta, no Material elevation. En reposo: blur 10px, sombra `0 4px 20px rgba(0,0,0,0.5)`, borde de pelo. En hover: `translateY(-2px)` (cards) o `−4px` (account-card), sombra más larga, borde un poco más visible. Los KPIs suman un glow del color semántico. El modal sube a `0 20px 40px rgba(0,0,0,0.8)` con backdrop blur 4px al 70%.
-
-### Shadow Vocabulary
-
-- **Card rest** (`0 4px 20px rgba(0,0,0,0.5)`): paneles en reposo.
-- **Card hover** (`0 8px 30px rgba(0,0,0,0.6)`): lift.
-- **Lamp glow** (`0 0 15px rgba(139, 92, 246, 0.3)`): KPI de saldo y CTA hover (`0 4px 12px`).
-- **Focus ring** (`0 0 0 3px rgba(139, 92, 246, 0.15)`): inputs.
-- **Modal** (`0 20px 40px rgba(0,0,0,0.8)`): overlay.
-
-**The Glass-at-Rest Rule.** En reposo el vidrio es plano-translúcido. La sombra y el lift son respuesta de estado, no decoración permanente de cada caja.
+**The Tabular Money Rule.** Los montos usan la clase `.font-money` (`Space Grotesk` + `font-variant-numeric:
+tabular-nums` + weight 600). Nunca un body proporcional para una columna de dinero — se mantiene igual
+que en la v1.
 
 ## Shapes
 
-Radios suaves, no píldora ni square-fintech.
+Radios suaves definidos en `tailwind.config.ts`: `sm` 4px, `md` 6px, `lg` 8px (inputs, botones, filas),
+`xl` 16px (cards, modales). Sin píldora, sin square-fintech agresivo.
 
-- Scrollbar 4px
-- Badges / chips 6px
-- Botones, inputs, tabla en móvil 8px
-- Cards y modales 16px
+## Elevation
 
-Bordes de 1px zinc; el vidrio usa `1px solid rgba(255,255,255,0.05)`. Sin círculos de avatar ni blobs.
+**Flat by default.** En reposo, las superficies son opacas y planas (`bg-surface`, borde de 1px), sin
+blur ni translucidez. Las sombras (`shadow-card`, `shadow-card-hover`, `shadow-popover` en
+`tailwind.config.ts`) se reservan para elementos flotantes de verdad: `Dialog`, `DropdownMenu`,
+`Select` (todos construidos sobre Reka UI). Una card en reposo en la grilla del dashboard **no** lleva
+sombra.
 
-**The 16/8/6 Rule.** Superficie 16, control 8, chip 6. No mezclar un botón pill con una card 16.
+## Componentes
 
-## Components
-
-### Buttons
-
-- **Shape:** radio 8px, padding `0.6rem 1.2rem`, weight 500, DM Sans, ease `cubic-bezier(0.4, 0, 0.2, 1)`.
-- **Primary:** fondo tinta violeta. Hover: violeta hover, lift −1px, glow violeta.
-- **Success:** Haber; hover `#059669` + glow esmeralda.
-- **Outline light:** borde blanco 15%, texto humo. Hover: velo blanco 5%.
-- **Outline warning / danger / info:** oro, debe, violeta al 30–50% de borde; hover rellena al 10%.
-
-### Chips
-
-- Badge de cuenta: padding `0.5em 0.8em`, radio 6px, weight 600. El relleno es el gradiente del banco (Ualá azul, MP cian, BBVA gris, etc.), no la lámpara.
-
-### Cards / Containers
-
-- Radio 16px, fondo pizarra al 70% + blur 10px, borde de pelo, sombra de reposo.
-- Header de card transparente, borde inferior zinc, padding 1.25–1.5rem.
-- KPI cards: mismo vidrio + raya inferior de 2px en el color semántico y glow.
-
-### Inputs / Fields
-
-- Fondo encabezado, borde zinc, radio 8px, padding `0.6rem 1rem`.
-- Focus: fondo tinta-media, borde lámpara, ring violeta 15%.
-- Placeholder ceniza.
-
-### Navigation
-
-Header vidrio (`rgba(9,9,11,0.8)` + blur 12px). Grupos de sección (Movimientos / Obligaciones / Simulador) como `btn-group`. El activo es sólido claro; el resto outline. Cuentas usa outline violeta. Refresh outline light.
+Primitivas en `src/components/ui/*` (Button, Input, Select, Dialog, Switch, DropdownMenu,
+Badge, Table), construidas sobre Reka UI (headless) + `class-variance-authority` para variantes,
+estilizadas con las utilidades de Tailwind que resuelven a los tokens de arriba. Nunca CSS a mano fuera
+de `main.css` (tokens + `font-money`).
 
 ## Do's and Don'ts
 
 ### Do:
 
-- **Do** poner Space Grotesk en wordmark, títulos y montos; DM Sans en controles y tabla.
-- **Do** usar vidrio 16px y lámpara violeta solo en confirmación y saldo.
-- **Do** pintar Haber/Debe/Oro según semántica contable, no según “estado de UI” genérico.
-- **Do** lift + glow en hover; focus ring violeta en campos.
+- **Do** usar `font-money` en toda cifra monetaria (tablas, KPIs, badges de saldo).
+- **Do** reservar `primary` (violeta) para el CTA principal y el estado activo de navegación.
+- **Do** pintar Haber/Debe/Info según semántica contable, nunca según "estado de UI" genérico.
+- **Do** mantener las superficies planas; sombra solo en overlays (Dialog/Dropdown/Select).
 
 ### Don't:
 
-- **Don't** tratar particles.js como parte del sistema; es ruido legado.
-- **Don't** usar el verde `#4CAF50` del `manifest.theme-color` como marca; la lámpara es violeta.
-- **Don't** introducir fondo claro, serif editorial, ni acento distinto al de la lámpara.
-- **Don't** pintar una transferencia interna como Debe.
-- **Don't** redondear botones a píldora ni cards a 4px.
+- **Don't** reintroducir `backdrop-filter`, vidrio ni `particles.js`.
+- **Don't** usar "oro"/ámbar para Obligaciones; el semántico vigente es `info` (azul).
+- **Don't** pintar una transferencia interna como Debe (es neutra, no es un gasto).
+- **Don't** redondear botones a píldora ni cards a un radio distinto de la escala `sm/md/lg/xl`.

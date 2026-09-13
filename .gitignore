@@ -12,9 +12,14 @@ package-lock.json
 yarn.lock
 **/yarn.lock
 
+# Editor / Cursor (skills y reglas locales; no forman parte de la app)
+.cursor/
+
 # Otros
 dist/
+dist-ssr/
 build/
+*.local
 todo.md
 
 # Datos personales de importación

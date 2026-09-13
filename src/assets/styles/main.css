@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Tokens de diseño KashFlow v2 — fintech minimalista (Stripe-like), dark mode default.
+ * Traducidos desde public/css/journal.css ("El libro nocturno"), sin glass/backdrop-filter
+ * ni particles.
+ *
+ * Canales RGB separados por espacio (no hex) para poder usar el patron
+ * `rgb(var(--token) / <alpha-value>)` en tailwind.config.ts y que las utilidades de
+ * opacidad de Tailwind (bg-primary/50, etc.) funcionen sobre estas variables.
+ */
+@layer base {
+  :root {
+    /* Superficies (dark, default) */
+    --color-background: 9 9 11; /* tinta #09090b */
+    --color-surface: 24 24 27; /* pizarra, flat: sin blur ni translucidez */
+    --color-surface-muted: 19 19 22; /* encabezado de tabla / inputs #131316 */
+    --color-border: 39 39 42; /* #27272a */
+
+    /* Texto */
+    --color-foreground: 248 250 252; /* papel #f8fafc */
+    --color-muted-foreground: 161 161 170; /* humo #a1a1aa */
+    --color-subtle-foreground: 113 113 122; /* ceniza #71717a */
+
+    /* Acentos semánticos (no cambian entre tema claro/oscuro: son semántica contable) */
+    --color-primary: 139 92 246; /* violeta #8b5cf6 — unico acento de marca/CTA */
+    --color-primary-hover: 124 58 237; /* #7c3aed */
+    --color-haber: 16 185 129; /* verde #10b981 — ingresos */
+    --color-debe: 239 68 68; /* rojo #ef4444 — egresos */
+    --color-info: 59 130 246; /* azul #3b82f6 — info/obligaciones (reemplaza el "oro" viejo) */
+    --color-info-hover: 37 99 235; /* #2563eb */
+  }
+
+  /* Tema claro: mismo acento semántico, superficies invertidas */
+  [data-theme='light'] {
+    --color-background: 244 244 245; /* #f4f4f5 */
+    --color-surface: 255 255 255;
+    --color-surface-muted: 244 244 245;
+    --color-border: 228 228 231; /* #e4e4e7 */
+
+    --color-foreground: 24 24 27; /* #18181b */
+    --color-muted-foreground: 63 63 70; /* #3f3f46 */
+    --color-subtle-foreground: 82 82 91; /* #52525b */
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  html[data-theme='light'] {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family:
+      'DM Sans',
+      system-ui,
+      -apple-system,
+      sans-serif;
+  }
+}
+
+@layer utilities {
+  /* Tipografía de montos: Grotesk + tabular-nums, nunca proporcional en una columna de dinero */
+  .font-money {
+    font-family:
+      'Space Grotesk',
+      system-ui,
+      sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+}

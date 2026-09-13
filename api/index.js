@@ -47,7 +47,7 @@ if (enableTelegram) {
 
 app.listen(PORT, () => {
   console.log(`API escuchando en http://localhost:${PORT}`);
-  console.log(`📁 Archivos estáticos servidos desde: ${path.join(__dirname, '../public')}`);
+  console.log(`📁 Archivos estáticos servidos desde: ${path.join(__dirname, '../dist')}`);
 });
 
 module.exports = { db };

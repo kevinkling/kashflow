@@ -4,7 +4,7 @@
 # ============================================================================
 
 # ============================================================================
-# STAGE 1: Builder - Instalar dependencias
+# STAGE 1: Builder - Instalar dependencias de producción (API)
 # ============================================================================
 FROM node:20-slim AS builder
 
@@ -26,12 +26,31 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 
 # Instalar dependencias de producción
-RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
 # Manually build better-sqlite3 with npm
 RUN cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && \
     npm run build-release && \
     cd /app
+
+# ============================================================================
+# STAGE 1b: Web builder - Build de Vite para servir con Express
+# ============================================================================
+FROM node:20-slim AS web-builder
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+COPY index.html vite.config.mts tailwind.config.ts postcss.config.js \
+     tsconfig.json tsconfig.app.json tsconfig.node.json ./
+COPY src ./src
+COPY public ./public
+RUN pnpm build:web
+
 # ============================================================================
 # STAGE 2: Runtime - Imagen final optimizada
 # ============================================================================
@@ -67,8 +86,10 @@ COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
 
 # Copiar código fuente
 COPY --chown=nodejs:nodejs api ./api
-COPY --chown=nodejs:nodejs public ./public
 COPY --chown=nodejs:nodejs package.json ./
+
+# Copiar el build de Vite
+COPY --from=web-builder --chown=nodejs:nodejs /app/dist ./dist
 
 # Cambiar al usuario no-root
 USER nodejs

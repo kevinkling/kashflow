@@ -6,7 +6,9 @@
 
 ## 🧠 ¿Qué hace?
 
-Permite enviar mensajes en lenguaje natural al bot de Telegram para registrar automáticamente movimientos financieros en una base de datos SQLite. Incluye un dashboard web para visualizar y gestionar los movimientos.
+Permite enviar mensajes en lenguaje natural al bot de Telegram (o al Atajo de iOS) para registrar automáticamente movimientos financieros en una base de datos SQLite. Incluye un dashboard web (Vue 3 + Vite) para visualizar y gestionar movimientos, obligaciones, tarjetas y simulaciones.
+
+> El frontend fue migrado de HTML/CSS/JS vanilla + Bootstrap a Vue 3 + Tailwind CSS + Vite en septiembre de 2026.
 
 ---
 
@@ -14,41 +16,33 @@ Permite enviar mensajes en lenguaje natural al bot de Telegram para registrar au
 ```
 kashflow
 ├─ .env / .env.example
-├─ api
-│  ├─ bots
-│  │  ├─ commands.js        # Comandos específicos del bot
-│  │  └─ telegramBot.js     # Configuración del bot de Telegram
-│  ├─ index.js              # Punto de entrada de la API
-│  ├─ routes
-│  │  ├─ cuentas.js         # Rutas para gestión de cuentas
-│  │  ├─ telegram.js        # Rutas para el webhook de Telegram
-│  │  └─ web.js             # Rutas de la API REST
-│  └─ services
-│     ├─ bodyParser.js      # Parser de mensajes en lenguaje natural
-│     ├─ db.js              # Configuración y conexión a SQLite
-│     ├─ dbHelper.js        # Funciones para interactuar con la BD
-│     └─ utils.js           # Utilidades varias
+├─ api                       # Backend Express
+│  ├─ domains                # cuentas, movimientos, categorias, obligaciones, tarjetas,
+│  │                          # simulador, dashboard, telegram, atajo — cada uno con
+│  │                          # .routes.js / .service.js / .repository.js
+│  ├─ db/connection.js       # Conexión SQLite (better-sqlite3)
+│  ├─ shared/                # financeCalculations.js y otras utilidades compartidas
+│  ├─ app.js                 # Express app: estáticos (dist/), rutas, fallback SPA
+│  └─ index.js               # Punto de entrada (bot de Telegram opcional vía ENABLE_TELEGRAM_BOT)
+├─ src                       # Frontend Vue 3 + TypeScript + Tailwind CSS
+│  ├─ views/                 # InicioView, MovimientosView, ObligacionesView, SimuladorView, CuentasView
+│  ├─ components/            # ui/ (primitivas sobre Reka UI), layout/, shared/
+│  ├─ stores/                # Pinia: session, theme, cuentas, movimientos, obligaciones, tarjetas, simulador
+│  ├─ data/                  # http.ts + repositories/ (capa de datos, Resource<T>)
+│  ├─ composables/           # useCurrency, useDates, useContrastColor, useToast, useConfirmDialog
+│  └─ types/                 # Tipos alineados a las respuestas reales de la API
+├─ public                    # Iconos PWA (Vite los copia a dist/ en el build)
+├─ index.html
+├─ vite.config.mts           # Proxy /api -> :3000 en dev, vite-plugin-pwa en build
 ├─ data
-│  └─ kashflow.db           # Base de datos SQLite
+│  └─ kashflow.db            # Base de datos SQLite
+├─ data/updates/*.sql        # Migraciones aditivas (nunca se borra data en runtime)
 ├─ docker-compose.yml
-├─ Dockerfile
-├─ docs/
+├─ Dockerfile                # Multi-stage: build de Vite + backend Node
+├─ tests/                    # node --test contra SQLite temporal
+├─ DESIGN.md
 ├─ package.json
-├─ public
-│  ├─ css
-│  │  └─ journal.css        # Estilos del dashboard
-│  ├─ icons/
-│  ├─ img/
-│  ├─ js
-│  │  ├─ accounts-crud.js   # CRUD de cuentas
-│  │  ├─ accounts.js        # Gestión de cuentas
-│  │  ├─ journal.js         # Lógica del dashboard
-│  │  ├─ utils.js           # Utilidades del frontend
-│  │  └─ particles/
-│  │     └─ particles.min.js
-│  └─ index.html            # Dashboard web
-├─ README.md
-└─ temp/
+└─ README.md
 ```
 
 ---
@@ -58,7 +52,7 @@ kashflow
 - **Backend:** Node.js + Express.js
 - **Base de datos:** SQLite (better-sqlite3)
 - **Bot:** Telegram Bot API (node-telegram-bot-api)
-- **Frontend:** HTML/CSS/JS vanilla con particles.js
+- **Frontend:** Vue 3 (Composition API) + TypeScript + Tailwind CSS + Vite + Pinia + Reka UI + `vite-plugin-pwa`
 - **Gestor de paquetes:** pnpm
 - **Contenedor:** Docker
 
@@ -114,15 +108,25 @@ El bot interpreta los siguientes comandos en lenguaje natural:
    Luego actualizá `WEBHOOK_URL` en tu `.env` con la URL que te proporciona CloudFlared.
 
 5. Ejecutá el proyecto:
+
+   **Desarrollo** (dos terminales, el frontend en modo Vite con hot-reload):
    ```bash
-   # Modo desarrollo (con auto-reload)
+   # Terminal A: API (puerto 3000)
    pnpm dev
-   
-   # Modo producción
-   pnpm start
+
+   # Terminal B: frontend Vue con proxy /api -> :3000 (puerto 5173)
+   pnpm dev:web
+   ```
+   En desarrollo, accedé al dashboard en `http://localhost:5173` (Vite). El backend solo
+   sirve `http://localhost:3000` (API + el build de producción, si existe).
+
+   **Producción** (un solo proceso, Express sirve el build de Vite):
+   ```bash
+   pnpm build:web   # genera dist/
+   pnpm start       # sirve API + dist/ en :3000
    ```
 
-6. Accedé al dashboard web en `http://localhost:3000`
+6. Accedé al dashboard web en `http://localhost:3000` (producción) o `http://localhost:5173` (dev).
 
 ---
 
@@ -184,9 +188,3 @@ networks:
 ## 📌 Notas
 ⚠️ El proyecto está en desarrollo y enfocado en uso personal.
 En el futuro, agregar soporte para múltiples cuentas (por ejemplo: mi cuenta, la de papá, etc.).
-
-## Constitución
-
-Las reglas no negociables de calidad, tests, UX y performance están en
-[`kashflow/.specify/memory/constitution.md`](kashflow/.specify/memory/constitution.md) (v1.0.0).
-Los planes Speckit MUST pasar el Constitution Check de esa constitución.

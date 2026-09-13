@@ -1,3 +1,8 @@
+> ⚠️ **DESACTUALIZADO** (septiembre 2026): este documento describe la arquitectura `api/routes` +
+> `api/services` y el frontend vanilla de la v1. El backend real vive en `api/domains/*`
+> (`.routes.js` / `.service.js` / `.repository.js` por dominio) y el frontend es Vue 3 + Vite en
+> `src/`. Ver `README.md` para la arquitectura vigente.
+
 # PROJECT BRIEF: KashFlow - Sistema de Gestión Financiera Personal
 
 **Tipo de Documento**: Especificación Técnica Completa para AI/LLM  

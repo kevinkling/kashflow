@@ -1,0 +1,52 @@
+---
+alwaysApply: true
+---
+
+# Reglas de KashFlow
+
+Reglas de negocio, datos y seguridad que no dependen de qué tecnología use el dashboard.
+Rescatadas de `.specify/memory/constitution.md` v1.0.0 antes de eliminar el proceso de spec-kit.
+
+## Datos e integridad
+
+- **Idempotencia por `client_uid`**: un reintento con el mismo `client_uid` NUNCA debe insertar una segunda fila. Cubrir con test.
+- **Transferencias internas atómicas**: las dos transacciones (origen/destino) y el registro en `transferencias` se crean juntas o no se crea ninguna.
+- **Transferencia entre cuentas propias = neutra** (no suma como gasto). **Pago o transferencia a un tercero = egreso.**
+- **Reglas de negocio centralizadas**: ingreso, egreso, transferencia interna y pago a tercero pasan siempre por las mismas funciones de `dbHelper`, sin importar la interfaz (Atajo, web, u otra). Nunca duplicar esta lógica por interfaz.
+- **Migraciones aditivas**: versionar esquema con `data/updates/NNN_descripcion.sql`. Nunca borrar datos de producción desde `schema.sql` en runtime. Recrear tablas grandes requiere documentación y preservar filas existentes.
+- Mantener columnas históricas (`telegram_user_id`, `telegram_message_id`) aunque la interfaz de Telegram ya no se use.
+
+## Seguridad
+
+- **Prepared statements obligatorios** en toda consulta SQLite. Prohibido concatenar SQL con input del usuario.
+- **Validar inputs en el borde** (ruta o parser) antes de tocar la base. Payload inválido → 4xx con `{ ok: false, error }`.
+- **Autenticación del Atajo**: todo endpoint de escritura vía Atajo requiere `ATAJO_API_TOKEN` (`Authorization: Bearer` o `X-Api-Key`). Prohibido endpoint de escritura anónimo.
+- **Sin secretos en el repo**: tokens viven en `.env` (gitignored), documentados solo en `.env.example`.
+- **Logs nunca imprimen** el token del Atajo ni el contenido completo de comprobantes en producción.
+- No guardar imagen ni PDF de comprobantes; solo el texto extraído (el archivo se descarta en el dispositivo).
+
+## Formato y experiencia de usuario
+
+- **Español rioplatense** en todos los textos de usuario y mensajes de error. Etiquetas: Ingreso, Egreso, Transferencia interna, Pago a otra persona.
+- **Formato `es-AR`** para montos (miles con punto, decimales con coma), moneda ARS por defecto.
+- **Comprobantes por OCR**: el OCR puede sugerir campos, pero nunca se guarda sin confirmación explícita del usuario.
+- **Respuesta del Atajo** siempre en JSON estable: `ok`, `id`, `tipo`, `cuenta`, `monto`, `descripcion`, `mensaje`, y `duplicado` cuando aplique. `mensaje` debe ser una frase lista para notificación.
+- **Alias de cuenta case-insensitive**, siempre coincide con `cuentas.alias`, sin cambiar de significado entre interfaces.
+- Errores accionables ("La cuenta bbva no existe o está inactiva"), nunca un stack trace.
+
+## Testing mínimo (aplica a lo que se toque)
+
+- Cubrir con tests: parseo de montos (`es-AR` y punto decimal), auth del Atajo (401 sin token), los cuatro tipos de movimiento, idempotencia por `client_uid`, análisis de comprobante (texto vacío y típico).
+- Tests contra SQLite temporal — nunca contra `data/kashflow.db` real.
+- Casos obligatorios: cuenta inexistente, monto no positivo, transferencia con origen = destino.
+
+## Performance (referencia, no bloqueante para el frontend)
+
+- `POST /api/atajo/movimiento` y `GET /api/atajo/cuentas` en menos de 500ms p95 en red local.
+- Arranque del proceso + apertura de SQLite en menos de 5 segundos.
+- Índices en `fecha_hora`, `cuenta_id` y `client_uid` (único parcial cuando no es NULL).
+- Evitar N+1: listar movimientos usa JOIN o vista, no un query por fila.
+
+## Alcance
+
+- Proyecto personal, un solo usuario. Sin multi-tenant, sin Open Banking, sin servicios extra (Redis, colas, Postgres/otro motor). SQLite en archivo local es el almacén.
